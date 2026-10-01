@@ -62,7 +62,7 @@ Prometheus ──▶ Alertmanager (:9093) ──▶ Telegram
 
 Единственный именованный том — `etc_amnezia_wg` (конфиги WireGuard). Данные Grafana и Prometheus хранятся в bind-mount каталогах `grafana/data` и `prometheus/data`.
 
-Проверенные версии: Prometheus 3.15.0, Grafana 13.2.3. Образы помечены `:latest`, поэтому при обновлении состав версий меняется — проверяйте совместимость дашбордов.
+Проверенные версии: Prometheus 3.15.0, Grafana 13.2.3. Образы помечены `:latest`, поэтому при обновлении состав версий меняется — проверяйте совместимость дашбордов. Именно на переходе с Grafana 2.x на 13.x и Prometheus 2.x на 3.x пришлось переписать оба дашборда в папке System: часть метрик Grafana переименована, часть удалена, а дашборд Internals изначально рассчитан на Grafana Cloud в Kubernetes.
 
 ## Структура проекта
 
@@ -81,7 +81,7 @@ mkt_monitoring/
 │   └── _mktxp.conf                 # Секции [MKTXP] и [DIAG] (справочные, не подключены)
 ├── prometheus/
 │   ├── prometheus.yml              # Targets, интервалы, alerting, rule_files
-│   ├── alerts.rules                # 5 правил алертинга
+│   ├── alerts.rules                # 6 правил алертинга
 │   └── data/                       # TSDB (в git не отслеживается)
 ├── blackbox/
 │   └── blackbox.yml                # Модуль icmp_ttl5
@@ -99,11 +99,12 @@ mkt_monitoring/
 │   │   │   └── loki.yaml
 │   │   └── dashboards/
 │   │       ├── mikrotik.yml        # → папка Mikrotik
-│   │       │   └── mikrotik/mikrotik_mktxp_exporter.json   (95 панелей)
+│   │       │   ├── mikrotik_mktxp_exporter.json   (95 панелей)
+│   │       │   └── mikrotik_loki_logs.json       (3 панели, логи syslog)
 │   │       ├── amnezia.yml         # → папка amnezia
 │   │       │   └── amnezia/amnezia-wg-easy.json          (7 панелей)
 │   │       └── system.yml          # → папка System
-│   │           ├── system/system_grafana_internals.json   (25 панелей)
+│   │           ├── system/system_grafana_internals.json   (19 панелей)
 │   │           └── system/system_prometheus_stats.json    (14 панелей)
 │   └── data/                       # grafana.db, плагины, unified-search
 ├── loki/
@@ -124,7 +125,7 @@ mkt_monitoring/
 
 Файлы с суффиксами `_`, `._`, `_old` и `*-config-fs.yml` — неиспользуемые варианты конфигурации, оставлены как резервные копии.
 
-В `grafana/data` лежат 18 предустановленных плагинов (loki, prometheus, tempo, jaeger, influxdb, mysql, postgresql, mssql, opentsdb, stackdriver, zipkin, elasticsearch, grafana-lokiexplore-app, grafana-metricsdrilldown-app, grafana-exploretraces-app, grafana-pyroscope-app, grafana-pyroscope-datasource, grafana-advisor-app). Каталог есть в `.gitignore`, но при этом 1114 файлов из него уже отслеживаются в git — правило игнорирования на них не действует. Чтобы убрать шум из `git status`: `git rm -r --cached grafana/data`.
+В `grafana/data` лежат 18 предустановленных плагинов (loki, prometheus, tempo, jaeger, influxdb, mysql, postgresql, mssql, opentsdb, stackdriver, zipkin, elasticsearch, grafana-lokiexplore-app, grafana-metricsdrilldown-app, grafana-exploretraces-app, grafana-pyroscope-app, grafana-pyroscope-datasource, grafana-advisor-app) и база `grafana.db`. Каталог целиком в `.gitignore` и в git не отслеживается: состояние дашбордов, созданных или изменённых в UI, хранится только в `grafana/data/grafana.db` и не переносится в репозиторий автоматически. Чтобы перенести правку layout в файл, экспортируйте дашборд из UI и замените соответствующий JSON в `grafana/conf/provisioning/dashboards`.
 
 ## Требования
 
@@ -235,8 +236,11 @@ nano mktxp/credentials.yml
 | `amnezia-wg-easy` | 30s | `172.54.0.2:51821` (внешний сервер) |
 | `amnezia-wg-easy2` | 30s | `amnezia-wg-easy2:51821` (локальный контейнер) |
 | `blackbox` | 1s | `1.1.1.1`, `10.54.1.254`, `77.88.8.8` через модуль `icmp_ttl5` |
+| `prometheus` | 45s | `localhost:9090` (сам Prometheus, нужен для дашборда Prometheus 2.0 Stats) |
 
-Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+Всего 11 целей. Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+
+Без job `prometheus` дашборд Prometheus 2.0 Stats остаётся пустым: все его панели фильтруют `{job="prometheus"}`, и без самоскрейпа под серией нет ни одной метрики.
 
 Интервал 1s у blackbox — самый агрессивный расход. Он даёт детальную картину потерь, но при росте числа целей нагрузка растёт линейно.
 
@@ -343,8 +347,8 @@ curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -m json.to
 | Проверка | Результат |
 |----------|-----------|
 | Контейнеры | 10/10 `Up`, рестартов 0 |
-| Targets Prometheus | 10/10 `up` |
-| Правила алертинга | 1 группа / 5 правил, все `inactive` |
+| Targets Prometheus | 11/11 `up` (включая сам Prometheus) |
+| Правила алертинга | 1 группа / 6 правил, все `inactive` |
 | Alertmanager | `activeAlertmanagers: [alertmanager:9093]` |
 | Telegram | `alertmanager_notifications_total{integration="telegram"} = 1`, ошибок 0 |
 | Grafana | 4 дашборда в 3 папках, 2 datasource отвечают |
@@ -380,7 +384,7 @@ Promtail добавляет метки:
 - `routerboard` — из `__syslog_message_hostname` (hostname отправителя в сообщении)
 - `syslog_host` — из `__syslog_connection_hostname` (адрес, с которого пришло)
 
-В Grafana источник называется `Loki`, `maxLines: 1000`.
+В Grafana источник называется `Loki`, `maxLines: 1000`. Просмотр собранных записей — на дашборде [Mikrotik Loki Logs](#mikrotik-loki-logs) в папке Mikrotik.
 
 Настройка MikroTik:
 
@@ -422,7 +426,7 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 
 Два дашборда (`mikrotik`, `amnezia`) хранятся в формате Grafana `dashboard.grafana.app/v2`: панели описаны в `spec.elements`, размеры — в `spec.layout`. Дашборды System остались в классическом формате с массивом `panels`.
 
-Автообновление всех дашбордов — 10 секунд. Микротик: период `now-1h` → `now`, часовой пояс браузера. WireGuard: `now-15m` → `now`, `Europe/Moscow`.
+Автообновление всех дашбордов — 10 секунд. Часовой пояс у всех пяти `Asia/Novosibirsk`, он не зависит от настроек браузера. Микротик: период `now-1h` → `now`. WireGuard: `now-15m` → `now`.
 
 ### Mikrotik MKTXP Monitoring
 
@@ -447,6 +451,16 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 ![Mikrotik дашборд 2](assets/mktxp_2.png)
 ![Mikrotik дашборд 3](assets/mktxp_3.png)
 
+### Mikrotik Loki Logs
+
+3 панели, 3 запроса LogQL к Loki. Дашборд создан в UI Grafana и выгружен в репозиторий, часовой пояс в нём не задан — используется тот, что выбран в Grafana.
+
+- Log Counts By Topic — счётчик записей по темам
+- Log Counts By Topic Over Time — динамика по темам
+- Logs Lines By Topic — сами строки журнала с поиском
+
+Переменные `routerboard`, `topics` и `searchable_pattern`; источник логов — поток syslog, принятый `syslog-ng` на `:1514` и переданный в Loki через `promtail`.
+
 ### WireGuard wg-easy
 
 7 панелей, 10 запросов. Переменные `job` и `node` через `label_values(wireguard_configured_peers, job)`.
@@ -470,26 +484,32 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 
 ### System
 
-- **Grafana Internals** (25 панелей) — счётчики, CPU/память, файловые дескрипторы, коды ответов, логины, dataproxy, статистика дашбордов
+- **Grafana Internals** (19 панелей) — счётчики, CPU/память, файловые дескрипторы, коды ответов, логины, dataproxy, статистика дашбордов
 - **Prometheus 2.0 Stats** (14 панелей) — скорость записи сэмплов, длительность скрейпов, память, WAL, компакция, активные аппендеры, latency запросов
+
+Оба дашборда System изначально писались под Grafana Cloud и Grafana 2.x, поэтому потребовали правок:
+
+- **Prometheus 2.0 Stats** был полностью пуст, пока Prometheus не скрейпил сам себя. Панели фильтруют `job="prometheus"`, а такого job не было — теперь в `prometheus.yml` есть блок `- job_name: 'prometheus'` с целью `localhost:9090`. Метрика `prometheus_tsdb_compaction_duration_bucket` потеряла вставку `seconds` в Prometheus 3 и заменена на `prometheus_tsdb_compaction_duration_seconds_bucket`. `head_gc` осталась summary, а не гистограммой, поэтому её quantile-запрос сохранён; панель пуста, пока сборщик мусора head ни разу не сработал после старта.
+- **Grafana Internals** фильтровал все 30 запросов по `kubernetes_pod_name="$pod"`, а Grafana работает в Docker и такого лейбла не имеет. Переменная `pod` искала его через `label_values(grafana_info, kubernetes_pod_name)`, причём `grafana_info` в Grafana 13 больше не экспортируется. Фильтр заменён на `job="grafana"`, обе переменные удалены. `http_request_total` стал `grafana_http_request_duration_seconds_*`, а метрики `grafana_api_dashboard_get_milliseconds` и `..._save_milliseconds` в 13.x удалены — соответствующие 4 панели и 2 секции-строки убраны.
 
 ## Алертинг
 
 Цепочка: Prometheus → Alertmanager (`:9093`) → Telegram. Обе части подключены в `prometheus.yml`.
 
-Правила в `prometheus/alerts.rules` (группа `mikrotik_alerts`, 5 правил):
+Правила в `prometheus/alerts.rules` (группа `mikrotik_alerts`, 6 правил):
 
 | Алерт | Условие | for | Severity |
 |-------|---------|-----|----------|
 | HighCpuUsage | `mktxp_system_cpu_load > 60` | 5m | warning |
 | HighMemoryUsage | `(1 - mktxp_system_free_memory / mktxp_system_total_memory) * 100 > 65` | 2m | warning |
-| RouterOverheat | `mktxp_system_routerboard_temperature > 30` | 2m | critical |
+| RouterOverheat | `mktxp_system_routerboard_temperature > 40` | 2m | critical |
+| RouterCpuOverheat | `mktxp_system_cpu_temperature > 70` | 2m | critical |
 | LowUptime | `mktxp_system_uptime < 100` | 0m | warning |
 | MikroTikDown | `up{job="mktxp"} == 0` | 5m | critical |
 
 Каждое правило использует лейблы `routerboard_address` и `routerboard_name`, которые добавляет MKTXP.
 
-Порог `RouterOverheat > 30` — это 30 градусов, он подходит не для всех моделей RouterBOARD: у многих штатная температура выше. Проверьте фактические значения на дашборде.
+Температура у RouterOS доступна под двумя разными именами, поэтому правил два. `mktxp_system_routerboard_temperature` есть только у моделей с датчиком на плате (в стенде — Router-2, штатно 22–24 °C, порог 40 °C). `mktxp_system_cpu_temperature` есть, наоборот, только у hAP ax³ (Router-1, штатно 57–58 °C, порог 70 °C). Если оставить одно правило с порогом 30 °C, оно бы срабатывало постоянно на hAP ax³ и молчало на RB2011. Проверьте фактические значения на дашборде перед изменением порогов.
 
 Проверка состояния:
 
@@ -581,7 +601,8 @@ docker compose restart grafana
 | Порт 3003 занят | Измените `published` в секции `grafana` |
 | Amnezia не стартует | Нет `/dev/net/tun` или не хватает `NET_ADMIN` |
 | Prometheus/Grafana в цикле рестарта, `permission denied` | Каталоги `prometheus/data` и `grafana/data` созданы от root. Владельцы: `chown -R 65534:65534 prometheus/data` и `chown -R 472:0 grafana/data`, затем `docker compose restart prometheus grafana` |
-| `git status` постоянно грязный на `grafana/data` | Эти файлы отслеживаются в git несмотря на `.gitignore` — `git rm -r --cached grafana/data` |
+| `git status` постоянно грязный на `grafana/data` | Каталог исключён через `.gitignore` и не должен отслеживаться. Если файлы всё же попали в индекс: `git rm -r --cached grafana/data` |
+| MKTXP не опрашивает роутеры, в логах нет ошибок авторизации | Не создан `mktxp/credentials.yml`. Скопируйте шаблон и впишите логин/пароль: `cp mktxp/credentials.yml.example mktxp/credentials.yml`, затем `docker compose restart mktxp` |
 
 ## Ресурсы
 
