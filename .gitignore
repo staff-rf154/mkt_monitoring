@@ -1,0 +1,19 @@
+# Secrets
+.env
+amnezia/.env
+
+# Grafana data
+grafana/data/
+
+# Alertmanager data
+alertmanager/data/
+
+# Loki data
+loki/data/
+
+# Prometheus data
+prometheus/data/
+
+# OS files
+.DS_Store
+Thumbs.db

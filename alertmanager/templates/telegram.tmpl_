@@ -1,0 +1,11 @@
+{{ define "telegram.message" }}
+<b>{{ if eq .Status "firing" }}⚠️ Возникла проблема⚠️{{ else }}✅ Проблема решена ✅{{ end }}</b>
+
+<b>Событие:</b> {{ .CommonLabels.alertname }}
+<b>Описание:</b> {{ (index .Alerts 0).Annotations.description }}
+<b>Статус:</b> {{ .Status }}
+<b>Критичность:</b> {{ .CommonLabels.severity }}
+<b>Виртуальная машина:</b> {{ .CommonLabels.instance_name }}
+
+<b>Время начала:</b> {{ (index .Alerts 0).StartsAt.Local.Format "02-01-2006 15:04:05 MST" }}
+{{ end }}

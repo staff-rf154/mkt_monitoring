@@ -1,0 +1,187 @@
+networks:
+  monitoring: {}
+
+volumes:
+  etc_amnezia_wg: {}
+
+services:
+  mktxp:
+    container_name: mktxp
+    image: ghcr.io/akpw/mktxp:latest
+    user: root
+    volumes:
+      - './mktxp/:/root/mktxp/'
+    networks:
+      monitoring: null
+    restart: unless-stopped
+  grafana:
+    container_name: grafana
+#    hostname: tmp.154s.ru
+    environment:
+      GF_SECURITY_ADMIN_USER: ${ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_DEFAULT_THEME: "dark"
+      GF_USERS_DEFAULT_LANGUAGE: "ru-RU" 
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/mikrotik/mikrotik_mktxp_exporter.json
+    image: grafana/grafana:latest
+    networks:
+      monitoring: null
+    ports:
+    - protocol: tcp
+      published: 3003
+      target: 3000
+    restart: unless-stopped
+    volumes:
+    - ./grafana/data:/var/lib/grafana
+    #-  grafana_storage:/var/lib/grafana
+    - ./grafana/conf/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+    - ./grafana/conf/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+
+  loki:
+    command: -config.file=/etc/loki/loki-config.yml
+    container_name: loki
+    hostname: tmp.154s.ru
+    image: grafana/loki:latest
+    networks:
+      monitoring: null
+    ports:
+    - protocol: tcp
+      published: 3100
+      target: 3100
+    restart: unless-stopped
+    volumes:
+    - ./loki/loki-config.yml:/etc/loki/loki-config.yml
+
+  prometheus:
+    command:
+    - --log.level=debug
+    - --config.file=/etc/prometheus/prometheus.yml
+    - '--storage.tsdb.path=/prometheus'
+    - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+    - '--web.console.templates=/usr/share/prometheus/consoles'
+    - '--web.enable-lifecycle'
+    container_name: prometheus
+#    hostname: tmp.154s.ru
+    image: prom/prometheus:latest
+    networks:
+      monitoring: null
+    ports:
+    - published: 9090
+      target: 9090
+    restart: unless-stopped
+    volumes:
+      - ./prometheus:/etc/prometheus/
+      - ./prometheus/data:/prometheus
+  promtail:
+    command: -config.file=/etc/promtail/promtail-config.yml
+    container_name: promtail
+#    hostname: tmp.154s.ru
+    image: grafana/promtail:latest
+    networks:
+      monitoring: null
+    ports:
+    - protocol: tcp
+      published: 1514
+      target: 1514
+    - protocol: tcp
+      published: 9080
+      target: 9080
+    restart: unless-stopped
+    volumes:
+    - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+  syslog-ng:
+    command: -edv
+    container_name: syslog-ng
+    hostname: tmp.154s.ru
+    depends_on:
+    - promtail
+    image: balabit/syslog-ng:latest
+    networks:
+      monitoring: null
+    ports:
+    - protocol: udp
+      published: 514
+      target: 514
+    - protocol: tcp
+      published: 601
+      target: 601
+    restart: unless-stopped
+    volumes:
+    - ./syslog-ng/syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf:ro
+  blackbox:
+    image: quay.io/prometheus/blackbox-exporter:latest
+    container_name: blackbox-exporter
+#    hostname: tmp.154s.ru
+    command: --config.file=/config/blackbox.yml
+    volumes:
+      - ./blackbox/blackbox.yml:/config/blackbox.yml
+    networks:
+      monitoring: null
+    ports:
+      - protocol: tcp
+        published: 9115
+        target: 9115
+    restart: unless-stopped
+  alertmanager:
+    image: prom/alertmanager:latest
+    user: root
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager/alertmanager.yml.tmpl:/etc/alertmanager/alertmanager.yml.tmpl:ro
+      - ./alertmanager/entrypoint.sh:/usr/local/bin/entrypoint.sh:ro
+      - ./alertmanager/templates/:/etc/alertmanager/templates
+    container_name: alertmanager
+#    hostname: tmp.154s.ru
+    env_file:
+      - .env
+    environment:
+      TZ: "Asia/Novosibirsk"
+    restart: unless-stopped
+    entrypoint: /usr/local/bin/entrypoint.sh
+    command:
+      - --log.level=debug
+      - --config.file=/alertmanager/alertmanager.yml
+    networks:
+      monitoring: null
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    container_name: exporter
+    hostname: exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    restart: unless-stopped
+    environment:
+      TZ: "Asia/Novosibirsk"
+    networks:
+      monitoring: null
+  amnezia-wg-easy2:
+    image: ghcr.io/wowly/amnezia-wg-easy:latest
+    container_name: amnezia-wg-easy2
+    env_file: ./amnezia/.env
+    volumes:
+      - etc_amnezia_wg:/etc/amnezia/amneziawg
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.src_valid_mark: 1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      monitoring: null

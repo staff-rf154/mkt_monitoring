@@ -1,0 +1,606 @@
+# MKT Monitoring
+
+Стек мониторинга устройств MikroTik на Docker: сбор метрик через RouterOS API, визуализация в Grafana, алертинг через Alertmanager и централизованный сбор логов в Loki.
+
+![Grafana](assets/grafana.png)
+
+## Архитектура
+
+```
+┌─────────────┐     ┌─────────┐     ┌───────────┐     ┌─────────┐
+│  MikroTik   │────▶│  MKTXP  │────▶│ Prometheus │────▶│ Grafana │
+│  RouterOS   │ API │ :49090  │     │   :9090   │     │  :3003  │
+│  7.x :8728  │     │ внутри  │     │           │     │         │
+└─────────────┘     └─────────┘     └─────┬─────┘     └─────────┘
+       │                                  │  ▲             ▲
+       │ syslog                           │  │             │
+       │ UDP 514 / TCP 601                │  │             │
+       ▼                                  │  │             │
+┌─────────────┐     ┌─────────┐     ┌─────┴─────┐     ┌─────────┐
+│ syslog-ng   │────▶│ Promtail│────▶│   Loki    │────▶│ Grafana │
+│             │:1514│  :9080  │     │   :3100   │     │         │
+└─────────────┘  TCP└─────────┘     └───────────┘     └─────────┘
+
+┌─────────────┐     ┌───────────┐
+│ Blackbox    │────▶│ Prometheus│  ICMP-проверки (icmp_ttl5)
+│  Exporter   │     │           │
+│   :9115     │     │           │
+└─────────────┘     └───────────┘
+
+┌─────────────┐     ┌───────────┐
+│Node Exporter│────▶│ Prometheus│  метрики сервера
+│   :9100     │     │           │
+└─────────────┘     └───────────┘
+
+┌──────────────────┐     ┌───────────┐
+│ Amnezia WG Easy  │────▶│ Prometheus│  метрики VPN
+│ :51820/udp       │     │   :51821  │
+│ :51821/tcp       │     │           │
+└──────────────────┘     └───────────┘
+
+Prometheus ──▶ Alertmanager (:9093) ──▶ Telegram
+```
+
+Все 10 сервисов в одной docker-сети `monitoring`, обращаются друг к другу по именам контейнеров.
+
+## Сервисы
+
+| Сервис | Образ | Порт (хост) | Назначение |
+|--------|-------|-------------|------------|
+| **Grafana** | `grafana/grafana:latest` | 3003→3000 | Веб-интерфейс визуализации |
+| **Prometheus** | `prom/prometheus:latest` | 9090 | Сбор и хранение метрик |
+| **MKTXP** | `ghcr.io/akpw/mktxp:latest` | 49090 (внутри сети) | Экспорт метрик MikroTik через API |
+| **Blackbox Exporter** | `quay.io/prometheus/blackbox-exporter:latest` | 9115 | ICMP-проверка доступности |
+| **Node Exporter** | `prom/node-exporter` | 9100 | Метрики сервера |
+| **Amnezia WG Easy** | `ghcr.io/wowly/amnezia-wg-easy:latest` | 51820/udp, 51821/tcp | VPN-сервер с экспортом метрик |
+| **Loki** | `grafana/loki:latest` | 3100 | Агрегация логов |
+| **Promtail** | `grafana/promtail:latest` | 1514, 9080 | Приём syslog, отправка в Loki |
+| **syslog-ng** | `balabit/syslog-ng:latest` | 514/udp, 601/tcp | Приём syslog от MikroTik, пересылка в Promtail |
+| **Alertmanager** | `prom/alertmanager:latest` | 9093 | Маршрутизация алертов, отправка в Telegram |
+
+Порты на хост публикуют все, кроме MKTXP — его метрики забирает Prometheus по внутренней сети.
+
+Единственный именованный том — `etc_amnezia_wg` (конфиги WireGuard). Данные Grafana и Prometheus хранятся в bind-mount каталогах `grafana/data` и `prometheus/data`.
+
+Проверенные версии: Prometheus 3.15.0, Grafana 13.2.3. Образы помечены `:latest`, поэтому при обновлении состав версий меняется — проверяйте совместимость дашбордов.
+
+## Структура проекта
+
+```
+mkt_monitoring/
+├── docker-compose.yml              # Оркестрация всех сервисов
+├── Makefile                        # make run / make clean
+├── .env                            # TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID (в git не отслеживается)
+├── .env.example                    # Шаблон .env с плейсхолдерами
+├── .gitignore
+├── TestAlertmanager                # curl-скрипт проверки Telegram-уведомлений
+├── mktxp/
+│   ├── mktxp.conf                  # Устройства MikroTik + модули сбора (рабочий)
+│   ├── _mktxp.conf                 # Секции [MKTXP] и [DIAG] (справочные, не подключены)
+│   └── BK_mktxp.conf_              # Предыдущая версия (бэкап)
+├── prometheus/
+│   ├── prometheus.yml              # Targets, интервалы, alerting, rule_files
+│   ├── alerts.rules                # 5 правил алертинга
+│   └── data/                       # TSDB (в git не отслеживается)
+├── blackbox/
+│   └── blackbox.yml                # Модуль icmp_ttl5
+├── alertmanager/
+│   ├── alertmanager.yml.tmpl        # Маршрут + Telegram-ресивер (шаблон с ${TELEGRAM_*})
+│   ├── entrypoint.sh                # Подстановка переменных из .env через sed
+│   ├── data/                        # nflog, silences (в git не отслеживается)
+│   └── templates/
+│       ├── telegram.tmpl           # Шаблон сообщения (рабочий)
+│       └── telegram.tmpl_          # Предыдущая версия
+├── grafana/
+│   ├── conf/provisioning/
+│   │   ├── datasources/
+│   │   │   ├── prometheus.yaml     # По умолчанию
+│   │   │   └── loki.yaml
+│   │   └── dashboards/
+│   │       ├── mikrotik.yml        # → папка Mikrotik
+│   │       │   └── mikrotik/mikrotik_mktxp_exporter.json   (95 панелей)
+│   │       ├── amnezia.yml         # → папка amnezia
+│   │       │   └── amnezia/amnezia-wg-easy.json          (7 панелей)
+│   │       └── system.yml          # → папка System
+│   │           ├── system/system_grafana_internals.json   (25 панелей)
+│   │           └── system/system_prometheus_stats.json    (14 панелей)
+│   └── data/                       # grafana.db, плагины, unified-search
+├── loki/
+│   ├── loki-config.yml             # Рабочий конфиг (tsdb, схема v13)
+│   └── loki-config-2.x.yml         # Вариант для Loki 2.x (не подключён)
+├── promtail/
+│   ├── promtail-config.yml         # Рабочий: приём syslog на :1514
+│   └── promtail-config-fs.yml      # Вариант «чтение логов из файлов» (не подключён)
+├── syslog-ng/
+│   ├── syslog-ng.conf              # Рабочий: приём → promtail:1514
+│   ├── syslog-ng-fs.conf           # Вариант «запись в файлы» (не подключён)
+│   └── logs/.gitkeep               # Каталог под альтернативный конфиг
+├── amnezia/
+│   ├── .env                        # Параметры VPN-сервера
+│   └── docker-compose.yml          # Стенд для отдельного запуска (в основном compose не используется)
+└── assets/                         # Скриншоты дашбордов
+```
+
+Файлы с суффиксами `_`, `._`, `_old` и `*-config-fs.yml` — неиспользуемые варианты конфигурации, оставлены как резервные копии.
+
+В `grafana/data` лежат 18 предустановленных плагинов (loki, prometheus, tempo, jaeger, influxdb, mysql, postgresql, mssql, opentsdb, stackdriver, zipkin, elasticsearch, grafana-lokiexplore-app, grafana-metricsdrilldown-app, grafana-exploretraces-app, grafana-pyroscope-app, grafana-pyroscope-datasource, grafana-advisor-app). Каталог есть в `.gitignore`, но при этом 1114 файлов из него уже отслеживаются в git — правило игнорирования на них не действует. Чтобы убрать шум из `git status`: `git rm -r --cached grafana/data`.
+
+## Требования
+
+- Docker и Docker Compose v2
+- MikroTik RouterOS 7.x с доступом по API (порт 8728)
+- Ubuntu 24.04 (протестировано)
+- Для Amnezia WG Easy: `/dev/net/tun` и право `NET_ADMIN`
+- Каталоги `prometheus/data` и `grafana/data` создаются с непривилегированными владельцами, иначе контейнеры уйдут в рестарт с `permission denied`:
+
+```bash
+mkdir -p prometheus/data grafana/data
+chown -R 65534:65534 prometheus/data   # uid nobody в prom/prometheus
+chown -R 472:0 grafana/data             # uid grafana в grafana/grafana
+```
+
+## Быстрый старт
+
+### 1. Подготовка MikroTik
+
+```bash
+/user group add name=prometheus policy=api,read
+/user add name=prometheus group=prometheus password=YourStrongPassword
+```
+
+### 2. Установка
+
+```bash
+bash <(curl -sSL https://get.docker.com)
+sudo usermod -aG docker ${USER}
+newgrp docker
+
+git clone https://github.com/staffrf-png/mkt_monitoring.git
+cd mkt_monitoring
+cp .env.example .env          # токен Telegram-бота и chat_id
+```
+
+### 3. Конфигурация
+
+#### MKTXP (`mktxp/mktxp.conf`)
+
+Секция `[default]` — общие параметры и модули сбора; секции `[Router-N]` — конкретные устройства, наследуют `[default]` и переопределяют отдельные параметры.
+
+```ini
+[default]
+    enabled = True
+    hostname = 10.54.1.254
+    port = 8728
+    username = prometheus
+    password = YourStrongPassword
+    use_ssl = False
+    plaintext_login = True
+    timeout = 30
+    log_level = DEBUG
+
+    route = True
+    routing_stats = True
+    health = True
+    wireless = True
+    bgp = True
+    ipsec = True
+    poe = True
+    public_ip = True
+    switch_port = True
+    user = True
+    check_for_updates = True
+    installed_packages = True
+
+    interface = True
+    firewall = True
+    dhcp = True
+    monitor = True
+    connections = True
+    pool = True
+    neighbor = True
+    dns = True
+    dhcp_lease = True
+
+[Router-1]
+    hostname = 10.54.1.254
+
+[Router-2]
+    hostname = 10.54.2.254
+    route = False
+    timeout = 45
+```
+
+Секция `[new_default_parameters]` в конце файла содержит новые параметры текущей версии MKTXP. Значения, отличные от `False`/`None`, переносятся в `[default]`, остальные можно не трогать.
+
+Отключённые модули: `lte`, `eoip`, `ipip`, `netwatch`, `queue`, `certificate`, `capsman`, `kid_control_*`, `routerboard`, `ipv6_*`, `gre`, `bfd`, `wireguard_peers` и другие. Включайте по необходимости — каждый добавляет время к сбору.
+
+Секции `[MKTXP]` (listen-адрес, таймауты, пул соединений) и `[DIAG]` (пороги деградации) лежат в справочном файле `mktxp/_mktxp.conf` и по умолчанию не применяются. Порт MKTXP по умолчанию — `0.0.0.0:49090`, это соответствует `scrape_configs` в Prometheus.
+
+Конфиг монтируется в контейнер (`./mktxp/:/root/mktxp/`), но перечитывается только при старте — после правки нужен `docker compose restart mktxp`.
+
+#### Prometheus (`prometheus/prometheus.yml`)
+
+Глобально: `scrape_interval: 45s`, `scrape_timeout: 30s`, `evaluation_interval: 15s`, внешняя метка `origin_prometheus: mktxp`.
+
+| Job | Интервал | Target |
+|-----|----------|--------|
+| `node` | 5s | `node-exporter:9100` |
+| `mktxp` | 45s | `mktxp:49090` |
+| `grafana` | 45s | `grafana:3000` |
+| `loki` | 45s | `loki:3100` |
+| `promtail` | 45s | `promtail:9080` |
+| `amnezia-wg-easy` | 30s | `172.54.0.2:51821` (внешний сервер) |
+| `amnezia-wg-easy2` | 30s | `amnezia-wg-easy2:51821` (локальный контейнер) |
+| `blackbox` | 1s | `1.1.1.1`, `10.54.1.254`, `77.88.8.8` через модуль `icmp_ttl5` |
+
+Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+
+Интервал 1s у blackbox — самый агрессивный расход. Он даёт детальную картину потерь, но при росте числа целей нагрузка растёт линейно.
+
+Подключение Alertmanager (`alertmanager:9093`) и правила (`alerts.rules`) включены.
+
+#### Alertmanager (`alertmanager/alertmanager.yml.tmpl`)
+
+```yaml
+receivers:
+- name: telegram
+  telegram_configs:
+    - api_url: 'https://api.telegram.org'
+      bot_token: '${TELEGRAM_BOT_TOKEN}'
+      chat_id: ${TELEGRAM_CHAT_ID}
+      send_resolved: true
+```
+
+Значения подставляются из `.env` при старте контейнера, в репозитории их нет. Подробности — в разделе [Настройка Telegram-бота](#настройка-telegram-бота).
+
+Маршрут группирует каждый алерт отдельно (`group_by: ['...']`): `group_wait: 5s`, `group_interval: 1s`, `repeat_interval: 10m`. Шаблон — `alertmanager/templates/telegram.tmpl`, использует разметку Telegram (`*жирный*`, `<b>`, ссылки).
+
+Проверка доставки:
+
+```bash
+bash TestAlertmanager
+```
+
+Скрипт отправляет тестовый алерт через API Alertmanager — проверьте, дошло ли сообщение в Telegram.
+
+#### Grafana
+
+Учётные данные администратора задаются в `.env` в корне:
+
+```env
+ADMIN_USER=admin
+ADMIN_PASSWORD=admin
+```
+
+Текущий `.env` содержит копию параметров Amnezia (включая `WG_HOST` и `PASSWORD_HASH`) и не используется ни одним сервисом — `ADMIN_USER`/`ADMIN_PASSWORD` в нём нет, поэтому Grafana стартует с `admin`/`admin`.
+
+Остальное — в `docker-compose.yml`: язык `ru-RU`, тема `dark`, регистрация отключена, дашбордом по умолчанию открывается `Mikrotik MKTXP Monitoring`.
+
+#### Amnezia WG Easy (`amnezia/.env`)
+
+```env
+WG_PORT=51820                    # Порт VPN (UDP)
+PORT=51821                       # Порт веб-интерфейса (TCP)
+WG_HOST=your.domain.ru           # Публичный IP или домен
+PASSWORD_HASH='$2a$12$...'      # bcrypt-хеш пароля веб-интерфейса
+ENABLE_PROMETHEUS_METRICS=true   # Экспорт метрик
+UI_TRAFFIC_STATS=true            # Детальная статистика трафика в UI
+
+# Параметры маскировки (обход DPI)
+WG_JC=6
+WG_JMIN=10
+WG_JMAX=30
+WG_S1=70
+WG_S2=110
+```
+
+Генерация хеша:
+
+```bash
+docker run --rm ghcr.io/wowly/amnezia-wg-easy node -e "console.log(require('bcryptjs').hashSync('your_password', 10))"
+```
+
+Compose подключает именно `amnezia/.env` через `env_file`.
+
+### 4. Запуск
+
+Проверьте конфигурацию Prometheus заранее — контейнер не поднимется при ошибке в `rule_files`:
+
+```bash
+docker run --rm -v "$PWD/prometheus:/etc/prometheus:ro" \
+  --entrypoint promtool prom/prometheus:latest check config /etc/prometheus/prometheus.yml
+docker run --rm -v "$PWD/prometheus:/etc/prometheus:ro" \
+  --entrypoint promtool prom/prometheus:latest check rules /etc/prometheus/alerts.rules
+```
+
+Старт:
+
+```bash
+docker compose up -d      # фоновый режим
+make run                  # docker compose up — с логами в терминале
+```
+
+Перезагрузка конфигурации Prometheus без перезапуска (флаг `--web.enable-lifecycle` уже прописан):
+
+```bash
+curl -X POST http://localhost:9090/-/reload
+```
+
+### 5. Проверка после запуска
+
+Все 10 контейнеров должны быть в статусе `Up` без рестартов, а targets Prometheus — `up`:
+
+```bash
+docker compose ps
+curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -m json.tool
+```
+
+Состояние на момент последней проверки стенда (полное пересоздание с нуля):
+
+| Проверка | Результат |
+|----------|-----------|
+| Контейнеры | 10/10 `Up`, рестартов 0 |
+| Targets Prometheus | 10/10 `up` |
+| Правила алертинга | 1 группа / 5 правил, все `inactive` |
+| Alertmanager | `activeAlertmanagers: [alertmanager:9093]` |
+| Telegram | `alertmanager_notifications_total{integration="telegram"} = 1`, ошибок 0 |
+| Grafana | 4 дашборда в 3 папках, 2 datasource отвечают |
+| Loki | цепочка syslog-ng → promtail → Loki работает, метки `job`, `routerboard`, `service_name`, `syslog_host` |
+| Blackbox | 3/3 `probe_success = 1` |
+| Amnezia WG Easy | веб 200, 0 пиров на чистом томе |
+
+Известные особенности стенда:
+
+- **Router-3 (`10.54.3.254`) недоступен** — MKTXP получает `Connection ... has failed: timed out`. Это сетевая недоступность устройства, а не ошибка конфигурации. Router-1, Router-1-2 и Router-2 собираются штатно.
+- **Router-4 отсутствует** в `mktxp.conf`. Если в Grafana встречается `Router-4` — это устаревшая серия в старом хранилище Prometheus; очистите `prometheus/data` или дождитесь истечения retention.
+- **Amnezia на чистом томе содержит 0 пиров** — конфигурации клиентов удалены вместе с volume. Восстановление из резервной копии: `docker run --rm -v mkt_monitoring_etc_amnezia_wg:/etc/amnezia -v /opt/backup:/backup alpine tar xzf /backup/amnezia_wg_volume_*.tar.gz -C /etc/amnezia`.
+
+### 6. Доступ
+
+| Интерфейс | Адрес | Учётные данные |
+|-----------|-------|----------------|
+| Grafana | `http://server_ip:3003` | `ADMIN_USER` / `ADMIN_PASSWORD` |
+| Prometheus | `http://server_ip:9090` | — |
+| Alertmanager | `http://server_ip:9093` | — |
+| Blackbox Exporter | `http://server_ip:9115` | — |
+| Node Exporter | `http://server_ip:9100` | — |
+| Loki | `http://server_ip:3100` | — |
+| Promtail | `http://server_ip:9080` | — |
+| Amnezia WG Easy | `http://server_ip:51821` | пароль из `PASSWORD_HASH` |
+
+## Сбор логов MikroTik
+
+Цепочка: MikroTik → syslog-ng (:514/udp, :601/tcp) → Promtail (:1514/tcp) → Loki → Grafana.
+
+Promtail добавляет метки:
+
+- `routerboard` — из `__syslog_message_hostname` (hostname отправителя в сообщении)
+- `syslog_host` — из `__syslog_connection_hostname` (адрес, с которого пришло)
+
+В Grafana источник называется `Loki`, `maxLines: 1000`.
+
+Настройка MikroTik:
+
+```bash
+/system logging action
+set remote bsd-syslog=yes name=remote remote=XX.XX.XX.XX remote-port=514 src-address=0.0.0.0 syslog-facility=local0 syslog-severity=auto target=remote
+
+/system logging
+set 0 action=remote prefix=:Info
+set 1 action=remote prefix=:Error
+set 2 action=remote prefix=:Warning
+set 3 action=remote prefix=:Critical
+
+add action=remote disabled=no prefix=:Firewall topics=firewall
+add action=remote disabled=no prefix=:Account topics=account
+add action=remote disabled=no prefix=:Caps topics=caps
+add action=remote disabled=no prefix=:Wireles topics=wireless
+```
+
+Пример запроса в Grafana:
+
+```logql
+{routerboard="<hostname>"} |~ "(?i)error|critical|down"
+```
+
+Особенности хранения:
+
+- Loki пишет в `path_prefix: /tmp/loki`, том не пробрасывается — **логи теряются при пересоздании контейнера**
+- Promtail хранит позиции в `/tmp/positions.yaml` — при пересоздании возможна повторная отправка старых записей
+- Loki без аутентификации (`auth_enabled: false`), `replication_factor: 1`
+
+Альтернативные конфигурации (`promtail-config-fs.yml`, `syslog-ng-fs.conf`, `loki-config-2.x.yml`) рассчитаны на другие сценарии: чтение логов из файлов вместо приёма syslog и Loki 2.x с boltdb-shipper. Чтобы включить, замените путь в `volumes` соответствующего сервиса в `docker-compose.yml`.
+
+![Логи в Grafana](assets/mkt_loki_logs.png)
+
+## Дашборды
+
+Загружаются из `grafana/conf/provisioning/dashboards` при старте Grafana. Каталог провайдера соответствует папке в Grafana: `mikrotik` → Mikrotik, `amnezia` → amnezia, `system` → System. Обновление раз в 10 секунд, правки в UI разрешены (`allowUiUpdates: true`). У провайдера `amnezia` включён `disableDeletion: true`.
+
+Два дашборда (`mikrotik`, `amnezia`) хранятся в формате Grafana `dashboard.grafana.app/v2`: панели описаны в `spec.elements`, размеры — в `spec.layout`. Дашборды System остались в классическом формате с массивом `panels`.
+
+Автообновление всех дашбордов — 10 секунд. Микротик: период `now-1h` → `now`, часовой пояс браузера. WireGuard: `now-15m` → `now`, `Europe/Moscow`.
+
+### Mikrotik MKTXP Monitoring
+
+Основной дашборд: 95 панелей, 123 запроса, 73 уникальные метрики. Переменные: `node` (`label_values(mktxp_system_identity_info, routerboard_name)`), `wg_job` и `wg_node` для панелей WireGuard.
+
+| Группа метрик | Панели |
+|---------------|--------|
+| `mktxp_system_*` | CPU load, CPU frequency, CPU temperature, uptime (×2), System version (×2), Identity (×2), Routerboard HW (×2), HDD Utilization, Temperature (×2), Voltage, Installed Packages, Public Address (×2), IP Address (×2) |
+| `mktxp_interface_*` | Interface traffic, Rates, Incoming/Outgoing Packets, Rx/Tx Bytes Total, Total Network Inbound/Outbound, Throughput, Total Network, Interface Errors, Ethernet Ports: Status и Full Duplex |
+| `mktxp_queue_*` | Simple Queue — Rates, Processed/Queued/Dropped Bytes (download + upload); Queue Tree — Rates, Processed/Queued/Dropped |
+| `mktxp_wlan_*` | Noise Floor, Overall Tx CCQ, WLAN Clients Tx CCQ, Clients Signal Strength, Clients Signal-to-Noise, Clients Traffic, Registered Client Signal Strength, Client Devices, Number of clients |
+| `mktxp_capsman_*` | Remote Caps, CAPsMAN Registrations, CAPsMAN Clients, CAPsMAN Clients Traffic, CAPsMan Clients Signal Strength |
+| `mktxp_dhcp_lease_*` | DHCP Leases, DHCP Leases by Server, Total DHCP Leases |
+| `mktxp_routes_*` | Total Routes (×2), Routes per protocol |
+| `mktxp_bgp_*` | BGP Prefix Count, BGP Session Info, Uptime BGP Session |
+| `mktxp_firewall_*` | Firewall Rules Traffic, Raw Firewall Rules Traffic, Logged Firewall Rules Traffic, Logged Raw Firewall Rules Traffic |
+| `mktxp_internet_*` | Internet Bandwidth, Internet Latency, Latency (RTT), Latency (DNS resolution), Availability |
+| `mktxp_kid_control_*` | Client Devices, Data Transfers, Transfer Rates, Idle Times, Connected Devices, Active Users |
+| Прочее | `mktxp_ip_pool_used` (IP Pool Usage), `mktxp_poe_info` (POE, Status over time), `mktxp_netwatch_*` (Netwatch Info), `mktxp_public_ip_address_info`, `mktxp_connection_stats` (Open Connections, Open Connections Stats), `mktxp_active_users_info`, `mktxp_collection_time_total` (MKTXP Collection Times ×2), Traffic Stats |
+
+![Mikrotik дашборд 1](assets/mktxp_1.png)
+![Mikrotik дашборд 2](assets/mktxp_2.png)
+![Mikrotik дашборд 3](assets/mktxp_3.png)
+
+### WireGuard wg-easy
+
+7 панелей, 10 запросов. Переменные `job` и `node` через `label_values(wireguard_configured_peers, job)`.
+
+- Configured Peers, Enabled Peers, Connected Peers
+- Online Clients (время последнего handshake)
+- Таблица трафика по клиентам с разделением Upload / Download
+- Throughput и Traffic Stats (`rate(...[5m])` по каждому пиру)
+
+Веб-интерфейс Amnezia WG Easy: `http://server_ip:51821`.
+
+Возможности веб-интерфейса:
+
+- Управление клиентами: создание, редактирование, удаление, вкл/выкл
+- QR-код для мобильных клиентов
+- Скачивание конфига `.conf` для каждого клиента
+- Статистика: подключённые клиенты, графики Tx/Rx
+- One Time Links — временные ссылки на скачивание (по умолчанию выключено)
+- Client Expiry — ограничение срока действия клиента (по умолчанию выключено)
+- Traffic Stats — детальная статистика трафика (по умолчанию выключено)
+
+### System
+
+- **Grafana Internals** (25 панелей) — счётчики, CPU/память, файловые дескрипторы, коды ответов, логины, dataproxy, статистика дашбордов
+- **Prometheus 2.0 Stats** (14 панелей) — скорость записи сэмплов, длительность скрейпов, память, WAL, компакция, активные аппендеры, latency запросов
+
+## Алертинг
+
+Цепочка: Prometheus → Alertmanager (`:9093`) → Telegram. Обе части подключены в `prometheus.yml`.
+
+Правила в `prometheus/alerts.rules` (группа `mikrotik_alerts`, 5 правил):
+
+| Алерт | Условие | for | Severity |
+|-------|---------|-----|----------|
+| HighCpuUsage | `mktxp_system_cpu_load > 60` | 5m | warning |
+| HighMemoryUsage | `(1 - mktxp_system_free_memory / mktxp_system_total_memory) * 100 > 65` | 2m | warning |
+| RouterOverheat | `mktxp_system_routerboard_temperature > 30` | 2m | critical |
+| LowUptime | `mktxp_system_uptime < 100` | 0m | warning |
+| MikroTikDown | `up{job="mktxp"} == 0` | 5m | critical |
+
+Каждое правило использует лейблы `routerboard_address` и `routerboard_name`, которые добавляет MKTXP.
+
+Порог `RouterOverheat > 30` — это 30 градусов, он подходит не для всех моделей RouterBOARD: у многих штатная температура выше. Проверьте фактические значения на дашборде.
+
+Проверка состояния:
+
+```bash
+curl -s http://localhost:9090/api/v1/rules | python3 -m json.tool          # группы и правила
+curl -s http://localhost:9090/api/v1/alertmanagers | python3 -m json.tool  # подключён ли AM
+curl -s http://localhost:9090/api/v1/alerts | python3 -m json.tool         # активные алерты
+```
+
+### Настройка Telegram-бота
+
+Токен и `chat_id` не хранятся в репозитории — они лежат в `.env` (файл в `.gitignore`). Создайте его из шаблона:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+```ini
+TELEGRAM_BOT_TOKEN=1234567890:AAExampleTokenReplaceMe
+TELEGRAM_CHAT_ID=-1001234567890
+```
+
+`chat_id` личного чата обычно положительный (`1234567890`), группы и супергруппы — отрицательные (`-1001234567890` для супергруппы). Узнать его: напишите боту `/start`, затем откройте `https://api.telegram.org/bot<ТОКЕН>/getUpdates` и найдите `"chat":{"id":...}`.
+
+Дальше Alertmanager нужно пересоздать — конфиг генерируется при старте:
+
+```bash
+docker compose up -d --force-recreate alertmanager
+```
+
+Механика: `alertmanager/alertmanager.yml.tmpl` — шаблон с плейсхолдерами `${TELEGRAM_BOT_TOKEN}` и `${TELEGRAM_CHAT_ID}`. Entrypoint `alertmanager/entrypoint.sh` подставляет их через `sed` в `/alertmanager/alertmanager.yml` внутри контейнера, после чего запускает Alertmanager.
+
+Проверка доставки:
+
+```bash
+bash TestAlertmanager
+docker compose logs alertmanager | grep "Notify success"
+curl -s http://localhost:9093/metrics | grep 'alertmanager_notifications_total{integration="telegram"}'
+```
+
+> ⚠️ Бот должен быть добавлен в чат или группу и иметь право отправки. Если в группе включён режим защиты контента, бот должен быть администратором.
+
+![Prometheus](assets/prometheus.png)
+
+## Команды Makefile
+
+```bash
+make run      # docker compose up (attached, логи в терминал)
+make clean    # docker compose down + удаление ВСЕХ контейнеров и ВСЕХ томов Docker на хосте
+```
+
+> ⚠️ `make clean` выполняет `docker rm -f $(docker ps -a -q)` и `docker volume rm $(docker volume ls -q)`. Команды не ограничены этим проектом и удалят контейнеры и тома других стендов. Для остановки только этого стенда используйте `docker compose down`.
+
+## Диагностика
+
+Состояние targets:
+
+```bash
+curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -m json.tool
+```
+
+Метрики конкретного устройства:
+
+```bash
+curl -s http://localhost:9090/api/v1/query --data-urlencode 'query=mktxp_system_identity_info'
+```
+
+Логи и перезапуск сервисов:
+
+```bash
+docker compose logs -f mktxp
+docker compose logs -f loki promtail syslog-ng
+docker compose restart grafana
+```
+
+| Симптом | Причина |
+|---------|---------|
+| Prometheus не стартует, `promtool` FAILED | Опечатка в `rule_files` или синтаксис правил — проверьте `check config` и `check rules` |
+| `groups: 0` при работающем Prometheus | Правила ещё не перезагружены — `curl -X POST http://localhost:9090/-/reload` |
+| `activeAlertmanagers: []` | Alertmanager не запущен или недоступен по сети — `docker compose ps alertmanager` |
+| `mktxp` недоступен в Prometheus | Неверные IP/пароль в `mktxp.conf` или закрыт порт 8728. Смотреть `docker compose logs mktxp` |
+| Метрики MKTXP не изменились после правки конфига | Конфиг перечитывается только при старте — `docker compose restart mktxp` |
+| Логи не появляются в Grafana | Loki пишет в `/tmp/loki` без тома; проверьте цепочку `docker compose logs loki promtail syslog-ng` |
+| Запрос LogQL возвращает пусто | Не задан лейбл `routerboard` — проверьте hostname в syslog-сообщениях |
+| Уведомления в Telegram не приходят | Неверные `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` в `.env`, проверьте `bash TestAlertmanager` и `docker compose logs alertmanager \| grep "Notify success"` |
+| В Alertmanager работает receiver `web.hook` вместо `telegram` | Alertmanager читает дефолтный конфиг из образа — в `command` должен быть `--config.file=/alertmanager/alertmanager.yml` (сгенерированный), а не путь из `/etc/alertmanager/`. Проверьте `curl -s http://localhost:9093/api/v2/status \| python3 -m json.tool` |
+| В сгенерированном конфиге `bot_token: '${TELEGRAM_BOT_TOKEN}'` без подстановки | Не пересоздан контейнер — `docker compose up -d --force-recreate alertmanager`. Убедитесь, что `.env` существует и `env_file` указан в compose |
+| Порт 3003 занят | Измените `published` в секции `grafana` |
+| Amnezia не стартует | Нет `/dev/net/tun` или не хватает `NET_ADMIN` |
+| Prometheus/Grafana в цикле рестарта, `permission denied` | Каталоги `prometheus/data` и `grafana/data` созданы от root. Владельцы: `chown -R 65534:65534 prometheus/data` и `chown -R 472:0 grafana/data`, затем `docker compose restart prometheus grafana` |
+| `git status` постоянно грязный на `grafana/data` | Эти файлы отслеживаются в git несмотря на `.gitignore` — `git rm -r --cached grafana/data` |
+
+## Ресурсы
+
+Проект собран на основе:
+
+- [akpw/mktxp-stack](https://github.com/akpw/mktxp-stack)
+- [M0r13n/mikrotik_monitoring](https://github.com/M0r13n/mikrotik_monitoring)
+- [wg-easy](https://github.com/wg-easy/wg-easy) — источник дашборда WireGuard
+
+## Почему API вместо SNMP?
+
+SNP-мониторинг медленный и нагружает процессор устройства. API работает значительно быстрее и меньше грузит CPU, а также даёт большую гибкость: можно выполнять любые команды RouterOS и собирать сложные метрики.
+
+## Безопасность
+
+- `mktxp/mktxp.conf` хранит учётные данные API в открытом виде. Для RouterOS 7.x используйте `use_ssl = True`, `plaintext_login = False` и проверку сертификата (`ssl_certificate_verify = True`, `ssl_check_hostname = True`).
+- Учётная запись `prometheus` должна иметь только группу с `policy=api,read`.
+- Токен Telegram-бота и `chat_id` лежат в `.env`, который исключён из git. `amnezia/.env` содержит хеш пароля WireGuard-панели и тоже не отслеживается. Файл `mktxp/mktxp.conf` с учётными данными RouterOS, наоборот, в репозитории присутствует — замените пароль перед публикацией форка.
+- Grafana, Prometheus, Alertmanager, Loki, Promtail, Node Exporter и Blackbox Exporter публикуют порты на `0.0.0.0` без аутентификации. Ограничьте доступ через firewall или reverse proxy.
+- syslog-ng принимает syslog на 514/udp и 601/tcp из любой точки — без ограничений возможен приём и подделка логов извне.
+- `make clean` удаляет все контейнеры и тома Docker на хосте, включая чужие.
+
+## Лицензия
+
+См. файл [LICENSE](LICENSE).

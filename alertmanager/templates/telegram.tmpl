@@ -1,0 +1,16 @@
+{{ define "telegram.message" }}
+{{ range .Alerts }}
+{{ if eq .Status "firing" }}🚨 <b>ALERT</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}: <b>{{ .Labels.alertname }}</b>
+{{ if .Labels.routerboard_name }}🖥 Устройство: {{ .Labels.routerboard_name }}{{ end }}
+{{ if .Labels.routerboard_address }}🌡 Хост: {{ .Labels.routerboard_address }}{{ end }}
+{{ if .Labels.board_name }}📦 Модель: {{ .Labels.board_name }}{{ end }}
+{{ if .Labels.cpu }}⚙️ CPU: {{ .Labels.cpu }}{{ end }}
+{{ if .Labels.severity }}🔴 Severity: {{ .Labels.severity }}{{ end }}
+
+{{ if .Annotations.summary }}📌 Summary: {{ .Annotations.summary }}{{ end }}
+{{ if .Annotations.description }}🖥 Description: {{ .Annotations.description }}{{ end }}
+
+⏱ <b>Время:</b> {{ .StartsAt | date "2006-01-02 15:04:05 MST" }}
+{{ if .GeneratorURL }}🔗 <a href="{{ .GeneratorURL }}">Открыть в Prometheus</a>{{ end }}
+{{ end }}
+{{ end }}

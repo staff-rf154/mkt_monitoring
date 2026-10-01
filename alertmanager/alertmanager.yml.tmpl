@@ -1,0 +1,23 @@
+global:
+  resolve_timeout: 20s
+
+templates:
+- '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  receiver: telegram
+  group_by: ['...']      # Каждый алерт отдельно  
+  #group_by: ['alertname', 'cluster', 'severity']  # Группируй похожие
+  group_wait: 5s
+  group_interval: 1s
+  repeat_interval: 10m
+
+receivers:
+- name: telegram
+  telegram_configs:
+    - api_url: 'https://api.telegram.org'
+      bot_token: '${TELEGRAM_BOT_TOKEN}'
+      chat_id: ${TELEGRAM_CHAT_ID}
+      parse_mode: 'HTML'                # Шаблон telegram.tmpl использует HTML-разметку
+      message: '{{ template "telegram.message" . }}'
+      send_resolved: true                   # Отправлять уведомления о восстановлении

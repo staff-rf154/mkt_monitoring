@@ -1,0 +1,56 @@
+groups:
+- name: mikrotik_alerts
+  rules:
+  - alert: HighCpuUsage
+    expr: mktxp_system_cpu_load{} > 60
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage on MikroTik ({{ $labels.routerboard_address }}) name ({{$labels.routerboard_name}}"
+      description: "CPU usage is {{ printf \"%.1f\" $value }}% for 5 minutes."
+
+  - alert: HighMemoryUsage
+    expr: (1 - mktxp_system_free_memory{} / mktxp_system_total_memory{}) * 100 > 65
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High MEMORY usage on MikroTik ({{ $labels.routerboard_address }}) name ({{$labels.routerboard_name}}"
+      description: "MEMORY usage is {{ printf \"%.2f\" $value }}%."
+
+  - alert: RouterOverheat
+    expr: mktxp_system_routerboard_temperature{} > 40
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Router overheating on MikroTik ({{ $labels.routerboard_address }}) on name ({{$labels.routerboard_name}}"
+      description: "Board temperature is {{ printf \"%.1f\" $value }}°C for 2 minutes."
+
+  - alert: RouterCpuOverheat
+    expr: mktxp_system_cpu_temperature{} > 70
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "CPU overheating on MikroTik ({{ $labels.routerboard_address }}) on name ({{$labels.routerboard_name}}"
+      description: "CPU temperature is {{ printf \"%.1f\" $value }}°C for 2 minutes."
+
+  - alert: LowUptime
+    expr: mktxp_system_uptime{} < 100
+    for: 0m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Router has low uptime on MikroTik ({{ $labels.routerboard_address }})"
+      description: "Device has been running for only {{ $value }} seconds (less than 100 seconds)."
+
+  - alert: MikroTikDown
+    expr: up{job="mktxp"} == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "MKTXP instance {{ $labels.instance }} is down name ({{$labels.routerboard_name}}"
+      description: "The MKTXP exporter for instance {{ $labels.instance }} has been unreachable for more than 5 minutes."
