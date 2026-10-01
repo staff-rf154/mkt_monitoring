@@ -154,7 +154,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "process_start_time_seconds{kubernetes_pod_name=\"$pod\"} * 1000",
+          "expr": "process_start_time_seconds{job=\"grafana\"} * 1000",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A"
@@ -206,7 +206,7 @@
         "h": 7,
         "w": 6,
         "x": 6,
-        "y": 1
+        "y": 8
       },
       "id": 2,
       "links": [],
@@ -232,7 +232,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_stat_total_orgs{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_stat_total_orgs{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A"
@@ -284,7 +284,7 @@
         "h": 7,
         "w": 6,
         "x": 12,
-        "y": 1
+        "y": 15
       },
       "id": 3,
       "links": [],
@@ -310,7 +310,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_stat_total_users{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_stat_total_users{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A"
@@ -362,7 +362,7 @@
         "h": 7,
         "w": 6,
         "x": 18,
-        "y": 1
+        "y": 22
       },
       "id": 5,
       "links": [],
@@ -388,7 +388,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_stat_totals_dashboard{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_stat_totals_dashboard{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "refId": "A"
@@ -407,7 +407,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 29
       },
       "id": 22,
       "panels": [],
@@ -439,7 +439,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 9
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 14,
@@ -475,7 +475,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "avg(rate(process_cpu_seconds_total{kubernetes_pod_name=\"$pod\"}[5m]))",
+          "expr": "avg(rate(process_cpu_seconds_total{job=\"grafana\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "CPU Time",
@@ -528,7 +528,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 9
+        "y": 37
       },
       "hiddenSeries": false,
       "id": 15,
@@ -564,7 +564,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "avg(rate(process_resident_memory_bytes{kubernetes_pod_name=\"$pod\"}[5m]))",
+          "expr": "avg(rate(process_resident_memory_bytes{job=\"grafana\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Resident Mem",
@@ -575,7 +575,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "avg(rate(process_virtual_memory_bytes{kubernetes_pod_name=\"$pod\"}[5m]))",
+          "expr": "avg(rate(process_virtual_memory_bytes{job=\"grafana\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Virtual Mem",
@@ -628,7 +628,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 9
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 17,
@@ -664,7 +664,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "process_open_fds{kubernetes_pod_name=\"$pod\"}",
+          "expr": "process_open_fds{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Open FD",
@@ -711,7 +711,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 51
       },
       "id": 23,
       "panels": [],
@@ -743,7 +743,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 18,
@@ -779,7 +779,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_response_status_total{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_api_response_status_total{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "API {{ code }}",
@@ -790,7 +790,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_page_response_status_total{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_page_response_status_total{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Page {{ code }}",
@@ -801,7 +801,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_proxy_response_status_total{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_proxy_response_status_total{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Proxy {{ code }}",
@@ -854,7 +854,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 20,
@@ -890,10 +890,8 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "http_request_total{kubernetes_pod_name=\"$pod\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "{{handler}} - {{method}} - {{statuscode}}",
+          "expr": "sum(rate(grafana_http_request_duration_seconds_count{job=\"grafana\"}[5m])) by (code)",
+          "legendFormat": "{{code}}",
           "refId": "A"
         }
       ],
@@ -943,7 +941,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 66
       },
       "hiddenSeries": false,
       "id": 19,
@@ -979,7 +977,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_login_post_total{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_api_login_post_total{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "POST",
@@ -990,7 +988,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_login_oauth_total{kubernetes_pod_name=\"$pod\"}",
+          "expr": "grafana_api_login_oauth_total{job=\"grafana\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "OAuth",
@@ -1037,7 +1035,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 73
       },
       "id": 24,
       "panels": [],
@@ -1069,7 +1067,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 25
+        "y": 74
       },
       "hiddenSeries": false,
       "id": 6,
@@ -1105,7 +1103,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dataproxy_request_all_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.5\"}",
+          "expr": "grafana_api_dataproxy_request_all_milliseconds{job=\"grafana\", quantile=\"0.5\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.5 ",
@@ -1116,7 +1114,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dataproxy_request_all_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.9\"}",
+          "expr": "grafana_api_dataproxy_request_all_milliseconds{job=\"grafana\", quantile=\"0.9\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.9",
@@ -1127,7 +1125,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dataproxy_request_all_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.99\"}",
+          "expr": "grafana_api_dataproxy_request_all_milliseconds{job=\"grafana\", quantile=\"0.99\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.99",
@@ -1180,7 +1178,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 25
+        "y": 81
       },
       "hiddenSeries": false,
       "id": 7,
@@ -1216,7 +1214,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(grafana_api_dataproxy_request_all_milliseconds_sum{kubernetes_pod_name=\"$pod\"}[5m]) / rate(grafana_api_dataproxy_request_all_milliseconds_count{kubernetes_pod_name=\"$pod\"}[5m])",
+          "expr": "rate(grafana_api_dataproxy_request_all_milliseconds_sum{job=\"grafana\"}[5m]) / rate(grafana_api_dataproxy_request_all_milliseconds_count{job=\"grafana\"}[5m])",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Average Requests Duration",
@@ -1263,459 +1261,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
-      },
-      "id": 25,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "datasource",
-            "uid": "grafana"
-          },
-          "refId": "A"
-        }
-      ],
-      "title": "Dashboard Get Stats",
-      "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "summary for dashboard get duration",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 33
-      },
-      "hiddenSeries": false,
-      "id": 8,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "9.2.0",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_get_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.5\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.5",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_get_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.9\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.9",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_get_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.99\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.99",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dashboard Get Duration Quantiles",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "average dashboard get duration over 5 minutes",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 33
-      },
-      "hiddenSeries": false,
-      "id": 9,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "9.2.0",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "rate(grafana_api_dashboard_get_milliseconds_sum{kubernetes_pod_name=\"$pod\"}[5m]) / rate(grafana_api_dashboard_get_milliseconds_count{kubernetes_pod_name=\"$pod\"}[5m])",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.5",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dashboard Get Duration Avg [5 min]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 40
-      },
-      "id": 26,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "datasource",
-            "uid": "grafana"
-          },
-          "refId": "A"
-        }
-      ],
-      "title": "Dashboard Save Stats",
-      "type": "row"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "summary for dashboard save duration",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 41
-      },
-      "hiddenSeries": false,
-      "id": 10,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "9.2.0",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_save_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.5\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.5",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_save_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.9\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.9",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "grafana_api_dashboard_save_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.99\"}",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.99",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dashboard Save Duration Quantiles",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "average dashboard save duration over 5 minutes",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 41
-      },
-      "hiddenSeries": false,
-      "id": 11,
-      "legend": {
-        "alignAsTable": true,
-        "avg": true,
-        "current": true,
-        "max": true,
-        "min": true,
-        "show": true,
-        "total": false,
-        "values": true
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "9.2.0",
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "expr": "rate(grafana_api_dashboard_save_milliseconds_sum{kubernetes_pod_name=\"$pod\"}[5m]) / rate(grafana_api_dashboard_save_milliseconds_count{kubernetes_pod_name=\"$pod\"}[5m])",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "0.5",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Dashboard Save Duration Avg [5 min]",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 48
+        "y": 88
       },
       "id": 27,
       "panels": [],
@@ -1747,7 +1293,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 49
+        "y": 89
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1783,7 +1329,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dashboard_search_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.5\"}",
+          "expr": "grafana_api_dashboard_search_milliseconds{job=\"grafana\", quantile=\"0.5\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.5",
@@ -1794,7 +1340,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dashboard_search_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.9\"}",
+          "expr": "grafana_api_dashboard_search_milliseconds{job=\"grafana\", quantile=\"0.9\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.9",
@@ -1805,7 +1351,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "grafana_api_dashboard_search_milliseconds{kubernetes_pod_name=\"$pod\", quantile=\"0.99\"}",
+          "expr": "grafana_api_dashboard_search_milliseconds{job=\"grafana\", quantile=\"0.99\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.99",
@@ -1858,7 +1404,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 49
+        "y": 96
       },
       "hiddenSeries": false,
       "id": 13,
@@ -1894,7 +1440,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(grafana_api_dashboard_search_milliseconds_sum{kubernetes_pod_name=\"$pod\"}[5m]) / rate(grafana_api_dashboard_search_milliseconds_count{kubernetes_pod_name=\"$pod\"}[5m])",
+          "expr": "rate(grafana_api_dashboard_search_milliseconds_sum{job=\"grafana\"}[5m]) / rate(grafana_api_dashboard_search_milliseconds_count{job=\"grafana\"}[5m])",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "0.5",
@@ -1940,70 +1486,7 @@
     "system"
   ],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "isNone": true,
-          "selected": false,
-          "text": "None",
-          "value": ""
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Pod",
-        "multi": false,
-        "name": "pod",
-        "options": [],
-        "query": {
-          "query": "label_values(grafana_info,kubernetes_pod_name)",
-          "refId": "Prometheus-pod-Variable-Query"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "current": {
-          "isNone": true,
-          "selected": false,
-          "text": "None",
-          "value": ""
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "PBFA97CFB590B2093"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Version",
-        "multi": false,
-        "name": "version",
-        "options": [],
-        "query": {
-          "query": "label_values(grafana_info,version)",
-          "refId": "Prometheus-version-Variable-Query"
-        },
-        "refresh": 2,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-15m",
