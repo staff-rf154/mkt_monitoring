@@ -1,6 +1,7 @@
 # Secrets
 .env
 amnezia/.env
+mktxp/credentials.yml
 
 # Grafana data
 grafana/data/

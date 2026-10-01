@@ -76,8 +76,9 @@ mkt_monitoring/
 ├── TestAlertmanager                # curl-скрипт проверки Telegram-уведомлений
 ├── mktxp/
 │   ├── mktxp.conf                  # Устройства MikroTik + модули сбора (рабочий)
-│   ├── _mktxp.conf                 # Секции [MKTXP] и [DIAG] (справочные, не подключены)
-│   └── BK_mktxp.conf_              # Предыдущая версия (бэкап)
+│   ├── credentials.yml             # Логин и пароль API (в git не отслеживается)
+│   ├── credentials.yml.example     # Шаблон credentials.yml
+│   └── _mktxp.conf                 # Секции [MKTXP] и [DIAG] (справочные, не подключены)
 ├── prometheus/
 │   ├── prometheus.yml              # Targets, интервалы, alerting, rule_files
 │   ├── alerts.rules                # 5 правил алертинга
@@ -157,7 +158,9 @@ newgrp docker
 
 git clone https://github.com/staffrf-png/mkt_monitoring.git
 cd mkt_monitoring
-cp .env.example .env          # токен Telegram-бота и chat_id
+cp .env.example .env                  # токен Telegram-бота и chat_id
+cp mktxp/credentials.yml.example mktxp/credentials.yml   # логин и пароль API MikroTik
+nano mktxp/credentials.yml
 ```
 
 ### 3. Конфигурация
@@ -172,7 +175,7 @@ cp .env.example .env          # токен Telegram-бота и chat_id
     hostname = 10.54.1.254
     port = 8728
     username = prometheus
-    password = YourStrongPassword
+    credentials_file = /root/mktxp/credentials.yml
     use_ssl = False
     plaintext_login = True
     timeout = 30
@@ -594,9 +597,9 @@ SNP-мониторинг медленный и нагружает процесс
 
 ## Безопасность
 
-- `mktxp/mktxp.conf` хранит учётные данные API в открытом виде. Для RouterOS 7.x используйте `use_ssl = True`, `plaintext_login = False` и проверку сертификата (`ssl_certificate_verify = True`, `ssl_check_hostname = True`).
+- Логин и пароль API MikroTik лежат в `mktxp/credentials.yml`, файл исключён из git. MKTXP читает его по параметру `credentials_file`; сам конфиг пароль не содержит. Для RouterOS 7.x используйте `use_ssl = True`, `plaintext_login = False` и проверку сертификата (`ssl_certificate_verify = True`, `ssl_check_hostname = True`).
 - Учётная запись `prometheus` должна иметь только группу с `policy=api,read`.
-- Токен Telegram-бота и `chat_id` лежат в `.env`, который исключён из git. `amnezia/.env` содержит хеш пароля WireGuard-панели и тоже не отслеживается. Файл `mktxp/mktxp.conf` с учётными данными RouterOS, наоборот, в репозитории присутствует — замените пароль перед публикацией форка.
+- Токен Telegram-бота и `chat_id` лежат в `.env`, который исключён из git. `amnezia/.env` содержит хеш пароля WireGuard-панели и тоже не отслеживается. Пароль API MikroTik ранее находился в `mktxp/mktxp.conf` и попал в историю git — если репозиторий уже копировали, смените пароль на устройствах.
 - Grafana, Prometheus, Alertmanager, Loki, Promtail, Node Exporter и Blackbox Exporter публикуют порты на `0.0.0.0` без аутентификации. Ограничьте доступ через firewall или reverse proxy.
 - syslog-ng принимает syslog на 514/udp и 601/tcp из любой точки — без ограничений возможен приём и подделка логов извне.
 - `make clean` удаляет все контейнеры и тома Docker на хосте, включая чужие.
