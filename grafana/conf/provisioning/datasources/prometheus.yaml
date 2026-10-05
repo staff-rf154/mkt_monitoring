@@ -1,9 +1,16 @@
 apiVersion: 1
-datasources: 
-  - 
+datasources:
+  -
     access: proxy
     basicAuth: false
     isDefault: true
     name: Prometheus
     type: prometheus
     url: "http://prometheus:9090/"
+    jsonData:
+      # Минимальный интервал опроса. mktxp отдаёт метрики раз в минуту
+      # (scrape_interval: 60s), а Grafana без этой строки считает, что данные
+      # идут каждые 15 секунд, и вычисляет $__rate_interval = 60s. В окне
+      # шириной в интервал опроса rate() не находит двух точек и панели с
+      # rate(...[$__rate_interval]) показывают No data.
+      timeInterval: 1m
