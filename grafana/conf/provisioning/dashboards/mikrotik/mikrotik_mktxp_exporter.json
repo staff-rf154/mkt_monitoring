@@ -41,7 +41,7 @@
         "spec": {
           "id": 101,
           "title": "Queue Tree Rates",
-          "description": "",
+          "description": "Текущая скорость по очередям дерева, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -194,7 +194,7 @@
         "spec": {
           "id": 102,
           "title": "Simple Queue Processed Bytes",
-          "description": "",
+          "description": "Объём данных, обработанных простыми очередями, байты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -391,7 +391,7 @@
         "spec": {
           "id": 105,
           "title": "Queue Tree Dropped Bytes",
-          "description": "",
+          "description": "Объём данных, отброшенных очередями дерева, байты в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -546,7 +546,7 @@
         "spec": {
           "id": 106,
           "title": "Queue Tree Queued Bytes",
-          "description": "",
+          "description": "Объём данных, ожидающих в очередях дерева, байты в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -701,7 +701,7 @@
         "spec": {
           "id": 107,
           "title": "Simple Queue Rates",
-          "description": "",
+          "description": "Текущая скорость по простым очередям в обе стороны, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -896,7 +896,7 @@
         "spec": {
           "id": 110,
           "title": "Queue Tree Processed Bytes",
-          "description": "",
+          "description": "Объём данных, обработанный очередями дерева, байты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1051,7 +1051,7 @@
         "spec": {
           "id": 111,
           "title": "Simple Queue Queued Bytes",
-          "description": "",
+          "description": "Объём данных, ожидающих в простых очередях, байты в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1248,7 +1248,7 @@
         "spec": {
           "id": 112,
           "title": "Simple Queue Dropped Bytes",
-          "description": "",
+          "description": "Объём данных, отброшенных простыми очередями, байты в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1445,7 +1445,7 @@
         "spec": {
           "id": 113,
           "title": "IP Address",
-          "description": "",
+          "description": "Адрес роутера в сети управления, к которому обращается сборщик",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1543,7 +1543,7 @@
         "spec": {
           "id": 115,
           "title": "CPU Frequency",
-          "description": "",
+          "description": "Частота процессора в динамике по выбранному ядру, герцы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1753,7 +1753,7 @@
         "spec": {
           "id": 116,
           "title": "CPU",
-          "description": "",
+          "description": "Текущая частота процессора по каждому ядру, герцы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -1837,7 +1837,7 @@
         "spec": {
           "id": 117,
           "title": "Open Connections",
-          "description": "",
+          "description": "Таблица открытых соединений: клиент, адрес, порты и протокол",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2018,7 +2018,7 @@
         "spec": {
           "id": 118,
           "title": "Open Connections Stats",
-          "description": "",
+          "description": "Число открытых соединений по каждому клиенту",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2152,7 +2152,7 @@
         "spec": {
           "id": 12,
           "title": "System uptime",
-          "description": "",
+          "description": "Время работы роутера с момента загрузки",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2269,7 +2269,7 @@
         "spec": {
           "id": 120,
           "title": "System version",
-          "description": "",
+          "description": "Текущая версия RouterOS и версия, доступная для обновления",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2409,7 +2409,7 @@
         "spec": {
           "id": 121,
           "title": "Connected Devices",
-          "description": "",
+          "description": "Таблица устройств с ограничением трафика и времени простоя",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2627,7 +2627,7 @@
         "spec": {
           "id": 123,
           "title": "Data Transfers",
-          "description": "",
+          "description": "Объём переданных данных каждому устройству, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -2844,7 +2844,7 @@
         "spec": {
           "id": 124,
           "title": "Transfer Rates",
-          "description": "",
+          "description": "Скорость передачи данных каждому устройству, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3044,7 +3044,7 @@
         "spec": {
           "id": 125,
           "title": "Idle Times",
-          "description": "",
+          "description": "Время простоя устройства перед применением ограничений, секунды",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3190,7 +3190,7 @@
         "spec": {
           "id": 126,
           "title": "BGP Prefix Count",
-          "description": "",
+          "description": "Число префиксов, принятых и объявленных по каждому BGP-сеансу",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3314,7 +3314,7 @@
         "spec": {
           "id": 128,
           "title": "BGP Session Info",
-          "description": "",
+          "description": "Параметры BGP-сеансов: состояние, сосед и число префиксов",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3424,7 +3424,7 @@
         "spec": {
           "id": 129,
           "title": "Uptime BGP Session",
-          "description": "",
+          "description": "Время работы BGP-сеанса по каждому соседу",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3520,7 +3520,7 @@
         "spec": {
           "id": 131,
           "title": "Latency (DNS resolution)",
-          "description": "",
+          "description": "Время разрешения DNS-имён при проверках доступности узлов",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3638,7 +3638,7 @@
         "spec": {
           "id": 132,
           "title": "Latency (RTT)",
-          "description": "",
+          "description": "Время обратного пути при проверках доступности узлов",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3759,7 +3759,7 @@
         "spec": {
           "id": 133,
           "title": "Availability",
-          "description": "",
+          "description": "Доля успешных проверок доступности за интервал, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3876,7 +3876,7 @@
         "spec": {
           "id": 134,
           "title": "Incoming Packets",
-          "description": "",
+          "description": "Входящие пакеты по каждому интерфейсу в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -3994,7 +3994,7 @@
         "spec": {
           "id": 135,
           "title": "Outgoing packets",
-          "description": "",
+          "description": "Исходящие пакеты по каждому интерфейсу в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4111,7 +4111,7 @@
         "spec": {
           "id": 136,
           "title": "Total Network Inbound",
-          "description": "",
+          "description": "Входящий трафик суммарно по всем интерфейсам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4210,7 +4210,7 @@
         "spec": {
           "id": 137,
           "title": "Total Network Outbound",
-          "description": "",
+          "description": "Исходящий трафик суммарно по всем интерфейсам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4308,7 +4308,7 @@
         "spec": {
           "id": 138,
           "title": "Rx Bytes Total",
-          "description": "",
+          "description": "Всего принято байт каждым интерфейсом с момента загрузки",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4405,7 +4405,7 @@
         "spec": {
           "id": 139,
           "title": "Tx Bytes Total",
-          "description": "",
+          "description": "Всего отправлено байт каждым интерфейсом с момента загрузки",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4502,7 +4502,7 @@
         "spec": {
           "id": 14,
           "title": "",
-          "description": "",
+          "description": "Занятость памяти, загрузка процессора и диска, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4679,7 +4679,7 @@
         "spec": {
           "id": 140,
           "title": "Temperature",
-          "description": "",
+          "description": "Температура платы роутера и его процессора, градусы Цельсия",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4811,7 +4811,7 @@
         "spec": {
           "id": 141,
           "title": "Resources",
-          "description": "",
+          "description": "Занятость памяти, загрузка процессора и диска, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -4988,7 +4988,7 @@
         "spec": {
           "id": 142,
           "title": "System uptime",
-          "description": "",
+          "description": "Время работы роутера с момента загрузки",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5105,7 +5105,7 @@
         "spec": {
           "id": 143,
           "title": "Routerboard HW",
-          "description": "",
+          "description": "Модель платы роутера и время работы с момента загрузки",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5203,7 +5203,7 @@
         "spec": {
           "id": 144,
           "title": "CPU load",
-          "description": "",
+          "description": "Загрузка процессора в динамике по выбранному ядру, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5346,7 +5346,7 @@
         "spec": {
           "id": 145,
           "title": "System version",
-          "description": "",
+          "description": "Текущая версия RouterOS и версия, доступная для обновления",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5503,7 +5503,7 @@
         "spec": {
           "id": 146,
           "title": "CPU Frequency",
-          "description": "",
+          "description": "Частота процессора в динамике по выбранному ядру, герцы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5713,7 +5713,7 @@
         "spec": {
           "id": 147,
           "title": "Public Address",
-          "description": "",
+          "description": "Публичный адрес роутера и его DNS-имя, как видно снаружи",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5834,7 +5834,7 @@
         "spec": {
           "id": 148,
           "title": "IP Address",
-          "description": "",
+          "description": "Адрес роутера в сети управления, к которому обращается сборщик",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -5932,7 +5932,7 @@
         "spec": {
           "id": 149,
           "title": "Identity",
-          "description": "",
+          "description": "Имя роутера, как он отдаётся в сети управления",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6030,7 +6030,7 @@
         "spec": {
           "id": 150,
           "title": "Memory",
-          "description": "",
+          "description": "Занятая и вся память роутера в мегабайтах, динамика во времени",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6263,7 +6263,7 @@
         "spec": {
           "id": 151,
           "title": "Total Routes",
-          "description": "",
+          "description": "Число маршрутов в таблице маршрутизации прямо сейчас",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6377,7 +6377,7 @@
         "spec": {
           "id": 152,
           "title": "Total Network Inbound",
-          "description": "",
+          "description": "Входящий трафик суммарно по всем интерфейсам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6476,7 +6476,7 @@
         "spec": {
           "id": 153,
           "title": "Total Network Outbound",
-          "description": "",
+          "description": "Исходящий трафик суммарно по всем интерфейсам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6574,7 +6574,7 @@
         "spec": {
           "id": 154,
           "title": "Throughput",
-          "description": "",
+          "description": "Скорость приёма и отправки данных VPN на выбранном узле WireGuard",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6794,7 +6794,7 @@
         "spec": {
           "id": 155,
           "title": "Total Network",
-          "description": "",
+          "description": "Входящий и исходящий трафик по всем интерфейсам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6942,7 +6942,7 @@
         "spec": {
           "id": 156,
           "title": "Panel Title",
-          "description": "",
+          "description": "Сводная таблица принятых и отправленных байт по каждому пиру VPN",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7117,7 +7117,7 @@
         "spec": {
           "id": 16,
           "title": "CPU load",
-          "description": "",
+          "description": "Загрузка процессора в динамике по выбранному ядру, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7260,7 +7260,7 @@
         "spec": {
           "id": 18,
           "title": "HDD Utilization",
-          "description": "",
+          "description": "Занятый и общий объём флеш-памяти роутера в байтах",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7510,7 +7510,7 @@
         "spec": {
           "id": 20,
           "title": "DHCP Leases by Server",
-          "description": "",
+          "description": "Число активных арендов по каждому DHCP-серверу",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7626,7 +7626,7 @@
         "spec": {
           "id": 23,
           "title": "Total DHCP Leases",
-          "description": "",
+          "description": "Всего активных арендов DHCP на роутере",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7742,7 +7742,7 @@
         "spec": {
           "id": 25,
           "title": "DHCP Leases",
-          "description": "",
+          "description": "Таблица арендов DHCP: адрес, имя клиента, срок окончания аренды",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -7946,7 +7946,7 @@
         "spec": {
           "id": 27,
           "title": "Internet Bandwidth",
-          "description": "",
+          "description": "Скорость доступа в интернет, заданная на роутере, по направлениям",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8068,7 +8068,7 @@
         "spec": {
           "id": 31,
           "title": "Noise Floor",
-          "description": "",
+          "description": "Уровень шума на каждом канале, децибелы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8232,7 +8232,7 @@
         "spec": {
           "id": 35,
           "title": "Remote Caps",
-          "description": "",
+          "description": "Удалённые точки доступа под управлением CAPsMAN и их состояние",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8391,7 +8391,7 @@
         "spec": {
           "id": 37,
           "title": "Number of clients",
-          "description": "",
+          "description": "Число зарегистрированных клиентов по каналам",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8555,7 +8555,7 @@
         "spec": {
           "id": 39,
           "title": "CAPsMAN Clients Traffic",
-          "description": "",
+          "description": "Входящий и исходящий трафик клиентов CAPsMAN, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8767,7 +8767,7 @@
         "spec": {
           "id": 41,
           "title": "CAPsMAN Clients",
-          "description": "",
+          "description": "Таблица клиентов, обслуживаемых CAPsMAN",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -8960,7 +8960,7 @@
         "spec": {
           "id": 43,
           "title": "Firewall Rules Traffic ",
-          "description": "",
+          "description": "Трафик по правилам фильтра, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9101,7 +9101,7 @@
         "spec": {
           "id": 47,
           "title": "CAPsMAN Registrations",
-          "description": "",
+          "description": "Число регистраций по интерфейсам и всего",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9234,7 +9234,7 @@
         "spec": {
           "id": 48,
           "title": "Registered Client Signal Strength",
-          "description": "",
+          "description": "Уровень сигнала зарегистрированных клиентов, децибелы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9354,7 +9354,7 @@
         "spec": {
           "id": 49,
           "title": "CAPsMan Clients Signal Strength",
-          "description": "",
+          "description": "Уровень сигнала клиентов CAPsMAN в динамике, децибелы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9491,7 +9491,7 @@
         "spec": {
           "id": 51,
           "title": "Ethernet Ports: Status",
-          "description": "",
+          "description": "Состояние портов: 1 — порт работает, 0 — не работает",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9601,7 +9601,7 @@
         "spec": {
           "id": 53,
           "title": "Rates",
-          "description": "",
+          "description": "Скорость каждого интерфейса, мегабит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9710,7 +9710,7 @@
         "spec": {
           "id": 55,
           "title": "Interface Errors",
-          "description": "",
+          "description": "Ошибки приёма и передачи по каждому интерфейсу в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9886,7 +9886,7 @@
         "spec": {
           "id": 57,
           "title": "Voltage",
-          "description": "",
+          "description": "Напряжение питания, измеренное на плате роутера, вольты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -9992,7 +9992,7 @@
         "spec": {
           "id": 59,
           "title": "Temperature",
-          "description": "",
+          "description": "Температура платы роутера и его процессора, градусы Цельсия",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10124,7 +10124,7 @@
         "spec": {
           "id": 6,
           "title": "Routerboard HW",
-          "description": "",
+          "description": "Модель платы роутера в подписи; в самом значении — время работы в секундах",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10222,7 +10222,7 @@
         "spec": {
           "id": 61,
           "title": "WLAN Clients Tx CCQ",
-          "description": "",
+          "description": "Качество передачи данных по каждому клиенту, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10363,7 +10363,7 @@
         "spec": {
           "id": 63,
           "title": "Clients Traffic",
-          "description": "",
+          "description": "Входящий и исходящий трафик беспроводных клиентов, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10611,7 +10611,7 @@
         "spec": {
           "id": 65,
           "title": "Clients Signal Strength",
-          "description": "",
+          "description": "Уровень сигнала беспроводных клиентов, децибелы",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10749,7 +10749,7 @@
         "spec": {
           "id": 66,
           "title": "Clients  Signal-to-Noise ",
-          "description": "",
+          "description": "Отношение сигнал к шуму у беспроводных клиентов",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -10887,7 +10887,7 @@
         "spec": {
           "id": 68,
           "title": "Client Devices",
-          "description": "",
+          "description": "Таблица подключённых беспроводных устройств",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11073,7 +11073,7 @@
         "spec": {
           "id": 69,
           "title": "Ethernet Ports: Full Duplex",
-          "description": "",
+          "description": "Состояние полного дуплекса по портам: 1 — включён, 0 — нет",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11183,7 +11183,7 @@
         "spec": {
           "id": 70,
           "title": "Total Routes",
-          "description": "",
+          "description": "Число маршрутов в таблице маршрутизации прямо сейчас",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11297,7 +11297,7 @@
         "spec": {
           "id": 71,
           "title": "Routes per protocol",
-          "description": "",
+          "description": "Число маршрутов, разбитых по протоколу: bgp, ospf, static, connect и другим",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11407,7 +11407,7 @@
         "spec": {
           "id": 72,
           "title": "Identity",
-          "description": "",
+          "description": "Имя роутера, как он отдаётся в сети управления",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11505,7 +11505,7 @@
         "spec": {
           "id": 73,
           "title": "Overall Tx CCQ",
-          "description": "",
+          "description": "Качество передачи данных на каждом канале, проценты",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11670,7 +11670,7 @@
         "spec": {
           "id": 74,
           "title": "Internet Latency",
-          "description": "",
+          "description": "Задержка до точки проверки доступа в интернет, миллисекунды",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -11792,7 +11792,7 @@
         "spec": {
           "id": 75,
           "title": "Interface traffic ",
-          "description": "",
+          "description": "Входящий и исходящий трафик по каждому интерфейсу, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12008,7 +12008,7 @@
         "spec": {
           "id": 76,
           "title": "Raw Firewall Rules Traffic ",
-          "description": "",
+          "description": "Трафик по сырым правилам, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12149,7 +12149,7 @@
         "spec": {
           "id": 77,
           "title": "MKTXP Collection Times",
-          "description": "",
+          "description": "Время сбора данных по разделам и суммарно, миллисекунды в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12311,7 +12311,7 @@
         "spec": {
           "id": 78,
           "title": "MKTXP Collection Times",
-          "description": "",
+          "description": "Время сбора данных по каждому разделу роутера, миллисекунд в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12433,7 +12433,7 @@
         "spec": {
           "id": 81,
           "title": "Logged Firewall Rules Traffic ",
-          "description": "",
+          "description": "Трафик по правилам фильтра с включённым логированием, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12574,7 +12574,7 @@
         "spec": {
           "id": 82,
           "title": "Logged Raw Firewall Rules Traffic ",
-          "description": "",
+          "description": "Трафик по сырым правилам с включённым логированием, бит в секунду",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12715,7 +12715,7 @@
         "spec": {
           "id": 85,
           "title": "POE",
-          "description": "",
+          "description": "Питание PoE по портам: напряжение, ток и мощность",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -12921,7 +12921,7 @@
         "spec": {
           "id": 87,
           "title": "Status over time",
-          "description": "",
+          "description": "Состояние отслеживаемых адресов во времени по каждой записи Netwatch",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13050,7 +13050,7 @@
         "spec": {
           "id": 88,
           "title": "Netwatch Info",
-          "description": "",
+          "description": "Параметры записей Netwatch: адрес, интервал и текущее состояние",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13221,7 +13221,7 @@
         "spec": {
           "id": 93,
           "title": "Public Address",
-          "description": "",
+          "description": "Публичный адрес роутера и его DNS-имя, как видно снаружи",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13342,7 +13342,7 @@
         "spec": {
           "id": 94,
           "title": "Installed Packages",
-          "description": "",
+          "description": "Список установленных на роутере пакетов и их версии",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13505,7 +13505,7 @@
         "spec": {
           "id": 97,
           "title": "IP Pool Usage",
-          "description": "",
+          "description": "Занятость каждого адресного пула: сколько адресов выдано и сколько свободно",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13621,7 +13621,7 @@
         "spec": {
           "id": 98,
           "title": "Active Users",
-          "description": "",
+          "description": "Активные пользователи роутера и адреса, с которых они вошли",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -13995,7 +13995,7 @@
                     "min",
                     "lastNotNull"
                   ],
-                  "displayMode": "list",
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
