@@ -165,6 +165,28 @@ services:
       TZ: "Asia/Novosibirsk"
     networks:
       monitoring: null
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    hostname: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    privileged: true
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=10s
+      - --store_container_labels=true
+    restart: unless-stopped
+    environment:
+      TZ: "Asia/Novosibirsk"
+    networks:
+      monitoring: null
   amnezia-wg-easy2:
     image: ghcr.io/wowly/amnezia-wg-easy:latest
     container_name: amnezia-wg-easy2

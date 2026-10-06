@@ -38,10 +38,15 @@
 │ :51821/tcp       │     │           │
 └──────────────────┘     └───────────┘
 
+┌──────────────────┐     ┌───────────┐
+│ cAdvisor         │────▶│ Prometheus│  метрики контейнеров Docker
+│ внутри сети      │     │           │
+└──────────────────┘     └───────────┘
+
 Prometheus ──▶ Alertmanager (:9093) ──▶ Telegram
 ```
 
-Все 10 сервисов в одной docker-сети `monitoring`, обращаются друг к другу по именам контейнеров.
+Все 11 сервисов в одной docker-сети `monitoring`, обращаются друг к другу по именам контейнеров.
 
 ## Сервисы
 
@@ -52,13 +57,14 @@ Prometheus ──▶ Alertmanager (:9093) ──▶ Telegram
 | **MKTXP** | `ghcr.io/akpw/mktxp:latest` | 49090 (внутри сети) | Экспорт метрик MikroTik через API |
 | **Blackbox Exporter** | `quay.io/prometheus/blackbox-exporter:latest` | 9115 | ICMP-проверка доступности |
 | **Node Exporter** | `prom/node-exporter` | 9100 | Метрики сервера |
+| **cAdvisor** | `gcr.io/cadvisor/cadvisor:latest` | нет (внутри сети) | Метрики контейнеров Docker: CPU, память, сеть, диск |
 | **Amnezia WG Easy** | `ghcr.io/wowly/amnezia-wg-easy:latest` | 51820/udp, 51821/tcp | VPN-сервер с экспортом метрик |
 | **Loki** | `grafana/loki:latest` | 3100 | Агрегация логов |
 | **Promtail** | `grafana/promtail:latest` | 1514, 9080 | Приём syslog, отправка в Loki |
 | **syslog-ng** | `balabit/syslog-ng:latest` | 514/udp, 601/tcp | Приём syslog от MikroTik, пересылка в Promtail |
 | **Alertmanager** | `prom/alertmanager:latest` | 9093 | Маршрутизация алертов, отправка в Telegram |
 
-Порты на хост публикуют все, кроме MKTXP — его метрики забирает Prometheus по внутренней сети.
+Порты на хост публикуют все, кроме MKTXP — его метрики забирает Prometheus по внутренней сети. cAdvisor наружу не публикуется вовсе: Prometheus достаёт его по имени контейнера внутри docker-сети `monitoring`, а внешнего доступа к нему не требуется.
 
 Единственный именованный том — `etc_amnezia_wg` (конфиги WireGuard). Данные Grafana и Prometheus хранятся в bind-mount каталогах `grafana/data` и `prometheus/data`.
 
@@ -99,13 +105,14 @@ mkt_monitoring/
 │   │   │   └── loki.yaml
 │   │   └── dashboards/
 │   │       ├── mikrotik.yml        # → папка Mikrotik
-│   │       │   ├── mikrotik_mktxp_exporter.json   (95 панелей)
+│   │       │   ├── mikrotik_mktxp_exporter.json   (96 панелей)
 │   │       │   └── mikrotik_loki_logs.json       (3 панели, логи syslog)
 │   │       ├── amnezia.yml         # → папка amnezia
 │   │       │   └── amnezia/amnezia-wg-easy.json          (7 панелей)
 │   │       └── system.yml          # → папка System
 │   │           ├── system/system_grafana_internals.json   (19 панелей)
-│   │           └── system/system_prometheus_stats.json    (14 панелей)
+│   │           ├── system/system_prometheus_stats.json    (14 панелей)
+│   │           └── system/docker.json                     (44 панели: контейнеры и хост)
 │   └── data/                       # grafana.db, плагины, unified-search
 ├── loki/
 │   ├── loki-config.yml             # Рабочий конфиг (tsdb, схема v13)
@@ -237,12 +244,15 @@ nano mktxp/credentials.yml
 | `amnezia-wg-easy2` | 30s | `amnezia-wg-easy2:51821` (локальный контейнер) |
 | `blackbox` | 1s | `1.1.1.1`, `10.54.1.254`, `77.88.8.8` через модуль `icmp_ttl5` |
 | `prometheus` | 45s | `localhost:9090` (сам Prometheus, нужен для дашборда Prometheus 2.0 Stats) |
+| `cadvisor` | 10s | `cadvisor:8080` (метрики контейнеров Docker) |
 
-Всего 11 целей. Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+Всего 12 целей. Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
 
 Без job `prometheus` дашборд Prometheus 2.0 Stats остаётся пустым: все его панели фильтруют `{job="prometheus"}`, и без самоскрейпа под серией нет ни одной метрики.
 
 Интервал 1s у blackbox — самый агрессивный расход. Он даёт детальную картину потерь, но при росте числа целей нагрузка растёт линейно.
+
+У cAdvisor интервал 10s, а не общие 45s: часть его метрик (`container_pressure_*`, состояния задач в cgroup) обновляется раз в секунду, и при редком опросе динамика в этих панелях рассыпается на ступени. Интервал меньше 10s не имеет смысла — сам cAdvisor пересчитывает состояния раз в 10 секунд (`--housekeeping_interval=10s`).
 
 Подключение Alertmanager (`alertmanager:9093`) и правила (`alerts.rules`) включены.
 
@@ -375,6 +385,26 @@ curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -m json.to
 | Promtail | `http://server_ip:9080` | — |
 | Amnezia WG Easy | `http://server_ip:51821` | пароль из `PASSWORD_HASH` |
 
+cAdvisor портов на хост не имеет и в списке нет намеренно: его `/metrics` доступен только внутри docker-сети, снаружи появляется вместе с ним.
+
+#### cAdvisor
+
+Единственный источник метрик по отдельным контейнерам Docker. Node Exporter про хоста о метриках контейнеров не знает, поэтому без cAdvisor дашборд Docker показывал бы только общую нагрузку машины.
+
+Запускается с `privileged: true` и монтированиями `/`, `/var/run`, `/sys`, `/var/lib/docker` и `/dev/disk` — иначе сборщик не видит ни список контейнеров, ни их файловые системы. Это read-only-монтирования, но `privileged` снимает изоляцию полностью: контейнер видит хост и может в него писать.
+
+Ключевые флаги:
+
+| Флаг | Зачем |
+|------|-------|
+| `--docker_only=true` | Только Docker, без метрик Kubernetes и systemd-контейнеров |
+| `--housekeeping_interval=10s` | Как часто пересчитываются состояния cgroup; от этого зависит минимальный разумный интервал опроса |
+| `--store_container_labels=true` | Метки контейнеров попадают в метрики, по ним удобно фильтровать в Grafana |
+
+Метрики, которые даёт (`container_*`): CPU (пользовательское, системное, суммарное), память (рабочая, RSS, кеш, максимум, подкачка, отказы выделения, `container_oom_events_total`), сеть (байты, пакеты, ошибки, потери), диск (чтение и запись, операции, время ожидания, inode, лимиты), а также `container_start_time_seconds`, `container_last_seen`, `container_scrape_error`, `container_spec_memory_limit_bytes` и PSI-метрики `container_pressure_*`.
+
+Отдельная полезная метрика — `machine_*`: ядра, память и подкачка всей машины, дублирующие часть node_exporter, но берущиеся из того же опроса.
+
 ## Сбор логов MikroTik
 
 Цепочка: MikroTik → syslog-ng (:514/udp, :601/tcp) → Promtail (:1514/tcp) → Loki → Grafana.
@@ -430,7 +460,21 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 
 ### Mikrotik MKTXP Monitoring
 
-Основной дашборд: 95 панелей, 123 запроса, 73 уникальные метрики. Переменные: `node` (`label_values(mktxp_system_identity_info, routerboard_name)`), `wg_job` и `wg_node` для панелей WireGuard.
+Основной дашборд: 96 панелей, 123 запроса, 73 уникальные метрики. Переменные: `node` (`label_values(mktxp_system_identity_info, routerboard_name)`), `wg_job` и `wg_node` для панелей WireGuard.
+
+Панели описаны: описание выводится по наведению на заголовок и говорит, что именно выводит запрос панели, с единицами измерения. Там, где заголовок расходится с содержимым, описан запрос, а не заголовок — например, `Routerboard HW` берёт `mktxp_system_uptime` ради лейбла `board_name` и показывает модель платы, а в значении у него время работы в секундах.
+
+Вкладка **New tab** перестроена по значимости, в каждом ряду ширины панелей выровнены:
+
+| Ряд | Панели | Высота |
+|-----|--------|--------|
+| 1 | `Identity`, `Routerboard HW`, `System version`, `Public Address`, `IP Address`, `System uptime` | 3 |
+| 2 | `Temperature`, `Total Network Inbound`, `Total Network Outbound`, `Total Routes` | 5 |
+| 3 | `Resources`, `CPU load`, `CPU Frequency`, `Memory` | 6 |
+| 4 | `Total Network`, `Throughput`, `Total Routes` (график), `Traffic Stats` | 10 |
+| 5 | Таблица WireGuard по пирам | 10 |
+
+Панели `Total Routes` — три штуки: две стат-панели (на `New tab` и `System`) и график динамики числа маршрутов на `New tab`. График показывает значение как есть, в штуках, без округления и сокращений (`suffix:шт`, `decimals: 0`), и легендой в виде таблицы.
 
 | Группа метрик | Панели |
 |---------------|--------|
@@ -486,6 +530,25 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 
 - **Grafana Internals** (19 панелей) — счётчики, CPU/память, файловые дескрипторы, коды ответов, логины, dataproxy, статистика дашбордов
 - **Prometheus 2.0 Stats** (14 панелей) — скорость записи сэмплов, длительность скрейпов, память, WAL, компакция, активные аппендеры, latency запросов
+- **Docker Monitoring** (44 панели, три вкладки) — мониторинг контейнеров и хоста
+
+#### Docker Monitoring
+
+Дашборд для стека и хост-машины. Контейнеры описывает cAdvisor, хост — node_exporter. Хранится в формате `dashboard.grafana.app/v2`, как и дашборды mikrotik и amnezia.
+
+Единственная переменная: `container` (`label_values(container_last_seen, name)`), по ней фильтруется вкладка «Контейнер».
+
+| Вкладка | Панелей | Содержимое |
+|---------|---------|-----------|
+| **Обзор** | 13 | Сколько контейнеров в работе, ошибки сбора, ядра, память и подкачка машины; суммарные CPU, память и сеть по всем контейнерам; разбивка CPU, памяти, сети и диска по каждому контейнеру; сводная таблица контейнеров |
+| **Контейнер** | 19 | Детализация по выбранному контейнеру: время работы, момент последнего опроса, лимит и доля памяти, отказы выделения; CPU с разбивкой на пользовательское и системное время; память (рабочая, RSS, кеш, максимум) и подкачка; сеть с байтами, пакетами, ошибками и потерями; диск с байтами, операциями и временем ожидания; файловая система и inode; блочный ввод-вывод |
+| **Хост** | 12 | CPU по режимам (пользовательское, системное, ожидание ввода-вывода, потеряно гостю), load average, память и подкачка, файловые системы, файлы и inode, сеть с байтами, пакетами и ошибками, ввод-вывод дисков, дескрипторы, PSI-метрики давления, время работы |
+
+Отдельного внимания требуют три группы панелей:
+
+- **Сводная таблица контейнеров** на вкладке «Обзор» — четыре запроса разных типов (`container_memory_working_set_bytes`, `container_spec_memory_limit_bytes`, скорость CPU и время работы). Это самый быстрый способ найти контейнер, который съел память или процессор.
+- **PSI-метрики** (`node_pressure_*`, `container_pressure_*`) показывают долю времени, когда хост или контейнер ждал процессор, память или диск. Это то, что показывает перегрузку до того, как её видно по задержкам.
+- **Блочный ввод-вывод** (`container_blkio_device_usage_total`) — единственная панель, которая может быть пустой: cAdvisor отдаёт её не для всех версий ядра и не для всех систем хранения.
 
 Оба дашборда System изначально писались под Grafana Cloud и Grafana 2.x, поэтому потребовали правок:
 
@@ -622,6 +685,7 @@ SNP-мониторинг медленный и нагружает процесс
 - Учётная запись `prometheus` должна иметь только группу с `policy=api,read`.
 - Токен Telegram-бота и `chat_id` лежат в `.env`, который исключён из git. `amnezia/.env` содержит хеш пароля WireGuard-панели и тоже не отслеживается. Пароль API MikroTik ранее находился в `mktxp/mktxp.conf` и попал в историю git — если репозиторий уже копировали, смените пароль на устройствах.
 - Grafana, Prometheus, Alertmanager, Loki, Promtail, Node Exporter и Blackbox Exporter публикуют порты на `0.0.0.0` без аутентификации. Ограничьте доступ через firewall или reverse proxy.
+- cAdvisor запущен с `privileged: true` и read-only-монтированиями каталогов хоста. Наружу портов не публикует, но такая привилегированность означает, что компрометация этого контейнера даёт доступ к хостовой файловой системе. Держите образ обновлённым и не добавляйте туда ничего, кроме сборщика метрик.
 - syslog-ng принимает syslog на 514/udp и 601/tcp из любой точки — без ограничений возможен приём и подделка логов извне.
 - `make clean` удаляет все контейнеры и тома Docker на хосте, включая чужие.
 
