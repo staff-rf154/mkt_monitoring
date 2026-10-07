@@ -2,7 +2,7 @@
 
 Стек мониторинга устройств MikroTik на Docker: сбор метрик через RouterOS API, визуализация в Grafana, алертинг через Alertmanager и централизованный сбор логов в Loki.
 
-![Grafana](assets/grafana.png)
+![Grafana](assets/Grafana.png)
 
 ## Архитектура
 

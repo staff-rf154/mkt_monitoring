@@ -18,3 +18,7 @@ prometheus/data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local backups
+*.bak
+*.bak2
