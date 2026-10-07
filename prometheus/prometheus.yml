@@ -82,15 +82,17 @@ scrape_configs:
       - targets: ['cadvisor:8080']
   
   - job_name: 'blackbox'
-    scrape_interval: 1s
+    scrape_interval: 15s
     metrics_path: /probe
     params:
       module: [icmp_ttl5]   # use ICMP as the ping protocol
     static_configs:
       - targets:
         - 1.1.1.1     # Cloudflare DNS
-        - 10.54.1.254     # Local DNS
         - 77.88.8.8   # Yandex DNS
+    # Микротики опрашиваются отдельно, в job mikrotik_ping ниже: у ICMP-целей
+    # нет лейблов routerboard_name/routerboard_address, которые добавляет MKTXP,
+    # а без них уведомление о недоступности приходит с пустым именем.
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -98,3 +100,42 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox:9115  # The blackbox exporter's real hostname:port.
+
+  - job_name: 'mikrotik_ping'
+    scrape_interval: 15s
+    metrics_path: /probe
+    params:
+      module: [icmp_ttl5]
+    static_configs:
+      - targets:
+        - 10.54.1.254    # Router-1
+        - 172.54.1.10    # Router-1-2
+        - 10.54.2.254    # Router-2
+        - 10.54.3.254    # Router-3
+    # routerboard_name проставляется через regex-замены по адресу, чтобы
+    # алерты в Telegram показывали читаемое имя устройства.
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - source_labels: [__param_target]
+        target_label: routerboard_address
+      - source_labels: [routerboard_address]
+        regex: '10\.54\.1\.254'
+        target_label: routerboard_name
+        replacement: 'Router-1'
+      - source_labels: [routerboard_address]
+        regex: '172\.54\.1\.10'
+        target_label: routerboard_name
+        replacement: 'Router-1-2'
+      - source_labels: [routerboard_address]
+        regex: '10\.54\.2\.254'
+        target_label: routerboard_name
+        replacement: 'Router-2'
+      - source_labels: [routerboard_address]
+        regex: '10\.54\.3\.254'
+        target_label: routerboard_name
+        replacement: 'Router-3'
+      - target_label: __address__
+        replacement: blackbox:9115

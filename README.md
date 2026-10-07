@@ -76,7 +76,7 @@ Prometheus ──▶ Alertmanager (:9093) ──▶ Telegram
 mkt_monitoring/
 ├── docker-compose.yml              # Оркестрация всех сервисов
 ├── Makefile                        # make run / make clean
-├── .env                            # TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID (в git не отслеживается)
+├── .env                            # TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_MESSAGE_THREAD_ID (в git не отслеживается)
 ├── .env.example                    # Шаблон .env с плейсхолдерами
 ├── .gitignore
 ├── TestAlertmanager                # curl-скрипт проверки Telegram-уведомлений
@@ -87,13 +87,14 @@ mkt_monitoring/
 │   └── _mktxp.conf                 # Секции [MKTXP] и [DIAG] (справочные, не подключены)
 ├── prometheus/
 │   ├── prometheus.yml              # Targets, интервалы, alerting, rule_files
-│   ├── alerts.rules                # 6 правил алертинга
+│   ├── alerts.rules                # 8 правил алертинга
 │   └── data/                       # TSDB (в git не отслеживается)
 ├── blackbox/
 │   └── blackbox.yml                # Модуль icmp_ttl5
 ├── alertmanager/
 │   ├── alertmanager.yml.tmpl        # Маршрут + Telegram-ресивер (шаблон с ${TELEGRAM_*})
 │   ├── entrypoint.sh                # Подстановка переменных из .env через sed
+│   ├── send_test_message.sh         # Тестовая отправка в Telegram напрямую через Bot API
 │   ├── data/                        # nflog, silences (в git не отслеживается)
 │   └── templates/
 │       ├── telegram.tmpl           # Шаблон сообщения (рабочий)
@@ -242,15 +243,18 @@ nano mktxp/credentials.yml
 | `promtail` | 45s | `promtail:9080` |
 | `amnezia-wg-easy` | 30s | `172.54.0.2:51821` (внешний сервер) |
 | `amnezia-wg-easy2` | 30s | `amnezia-wg-easy2:51821` (локальный контейнер) |
-| `blackbox` | 1s | `1.1.1.1`, `10.54.1.254`, `77.88.8.8` через модуль `icmp_ttl5` |
+| `blackbox` | 15s | `1.1.1.1`, `77.88.8.8` через модуль `icmp_ttl5` |
+| `mikrotik_ping` | 15s | `10.54.1.254`, `172.54.1.10`, `10.54.2.254`, `10.54.3.254` через `icmp_ttl5` |
 | `prometheus` | 45s | `localhost:9090` (сам Prometheus, нужен для дашборда Prometheus 2.0 Stats) |
 | `cadvisor` | 10s | `cadvisor:8080` (метрики контейнеров Docker) |
 
-Всего 12 целей. Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+Blackbox-метрики пробрасываются через `relabel_configs`: адрес цели превращается в `__param_target`, `__address__` подменяется на `blackbox:9115`.
+
+Микротики вынесены в отдельный job `mikrotik_ping`, а не оставлены в общем `blackbox`. Причина — лейблы: у ICMP-целей нет меток `routerboard_name`/`routerboard_address`, которые MKTXP добавляет к своим метрикам. Без них уведомление о недоступности приходило бы с пустым именем устройства, как это было у `MikroTikDown`. В `mikrotik_ping` эти лейблы проставляются `relabel_configs` с regex-заменами по адресу, и алерты `MikroTikUnreachable`/`MikroTikPingHigh` приходят с читаемым именем.
 
 Без job `prometheus` дашборд Prometheus 2.0 Stats остаётся пустым: все его панели фильтруют `{job="prometheus"}`, и без самоскрейпа под серией нет ни одной метрики.
 
-Интервал 1s у blackbox — самый агрессивный расход. Он даёт детальную картину потерь, но при росте числа целей нагрузка растёт линейно.
+Интервал ICMP-опроса 15s подобран под время срабатывания алертов, а не взят минимальным. Раньше был 1s — самый агрессивный расход: при росте числа целей нагрузка на blackbox растёт линейно, а выигрыша в скорости реакции для правил с `for: 1m` и `for: 5m` не было.
 
 У cAdvisor интервал 10s, а не общие 45s: часть его метрик (`container_pressure_*`, состояния задач в cgroup) обновляется раз в секунду, и при редком опросе динамика в этих панелях рассыпается на ступени. Интервал меньше 10s не имеет смысла — сам cAdvisor пересчитывает состояния раз в 10 секунд (`--housekeeping_interval=10s`).
 
@@ -358,17 +362,17 @@ curl -s 'http://localhost:9090/api/v1/targets?state=active' | python3 -m json.to
 |----------|-----------|
 | Контейнеры | 10/10 `Up`, рестартов 0 |
 | Targets Prometheus | 11/11 `up` (включая сам Prometheus) |
-| Правила алертинга | 1 группа / 6 правил, все `inactive` |
+| Правила алертинга | 1 группа / 8 правил, все `inactive` |
 | Alertmanager | `activeAlertmanagers: [alertmanager:9093]` |
 | Telegram | `alertmanager_notifications_total{integration="telegram"} = 1`, ошибок 0 |
-| Grafana | 4 дашборда в 3 папках, 2 datasource отвечают |
+| Grafana | 6 дашбордов в 3 папках, 2 datasource отвечают |
 | Loki | цепочка syslog-ng → promtail → Loki работает, метки `job`, `routerboard`, `service_name`, `syslog_host` |
-| Blackbox | 3/3 `probe_success = 1` |
+| Blackbox | `blackbox` 2/2 и `mikrotik_ping` 4/4 с `probe_success = 1` |
 | Amnezia WG Easy | веб 200, 0 пиров на чистом томе |
 
 Известные особенности стенда:
 
-- **Router-3 (`10.54.3.254`) недоступен** — MKTXP получает `Connection ... has failed: timed out`. Это сетевая недоступность устройства, а не ошибка конфигурации. Router-1, Router-1-2 и Router-2 собираются штатно.
+- **Router-3 (`10.54.3.254`) отвечает не всегда** — MKTXP периодически получает `Connection ... has failed: timed out` и `no such command prefix` на `/system/health/print`, потому что это RouterOS 6.x, а не 7.x. ICMP до него при этом стабильно отвечает (`probe_success = 1`), так что дело не в сети: устройство просто не успевает отвечать на пачку последовательных API-запросов MKTXP. Метрики собираются, но с пропусками. Router-1, Router-1-2 и Router-2 отвечают штатно.
 - **Router-4 отсутствует** в `mktxp.conf`. Если в Grafana встречается `Router-4` — это устаревшая серия в старом хранилище Prometheus; очистите `prometheus/data` или дождитесь истечения retention.
 - **Amnezia на чистом томе содержит 0 пиров** — конфигурации клиентов удалены вместе с volume. Восстановление из резервной копии: `docker run --rm -v mkt_monitoring_etc_amnezia_wg:/etc/amnezia -v /opt/backup:/backup alpine tar xzf /backup/amnezia_wg_volume_*.tar.gz -C /etc/amnezia`.
 
@@ -559,7 +563,7 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 
 Цепочка: Prometheus → Alertmanager (`:9093`) → Telegram. Обе части подключены в `prometheus.yml`.
 
-Правила в `prometheus/alerts.rules` (группа `mikrotik_alerts`, 6 правил):
+Правила в `prometheus/alerts.rules` (группа `mikrotik_alerts`, 8 правил):
 
 | Алерт | Условие | for | Severity |
 |-------|---------|-----|----------|
@@ -569,8 +573,12 @@ add action=remote disabled=no prefix=:Wireles topics=wireless
 | RouterCpuOverheat | `mktxp_system_cpu_temperature > 70` | 2m | critical |
 | LowUptime | `mktxp_system_uptime < 100` | 0m | warning |
 | MikroTikDown | `up{job="mktxp"} == 0` | 5m | critical |
+| MikroTikUnreachable | `probe_success{job="mikrotik_ping"} == 0` | 1m | critical |
+| MikroTikPingHigh | `probe_duration_seconds{job="mikrotik_ping"} > 0.5` | 5m | warning |
 
-Каждое правило использует лейблы `routerboard_address` и `routerboard_name`, которые добавляет MKTXP.
+Правила из MKTXP используют лейблы `routerboard_address` и `routerboard_name`, которые добавляет MKTXP. Два последних правила работают по job `mikrotik_ping` — это отдельный блок в `prometheus.yml`, где blackbox-exporter опрашивает ICMP все микротики (`10.54.1.254`, `172.54.1.10`, `10.54.2.254`, `10.54.3.254`) с интервалом 15 с. Лейблы `routerboard_name` и `routerboard_address` проставляются через `relabel_configs` с regex-заменами по адресу, поэтому в уведомлении видно, какое именно устройство не отвечает. Внешние DNS и `1.1.1.1` остались в job `blackbox` — они нужны как ориентир доступности интернета, но алертов на них нет.
+
+Интервал ICMP-опроса 15 с подобран из расчёта `for`: при `for: 1m` достаточно нескольких неуспешных проб подряд, при 1 с Prometheus генерировал бы лишний трафик к blackbox без выигрыша в скорости реакции.
 
 Температура у RouterOS доступна под двумя разными именами, поэтому правил два. `mktxp_system_routerboard_temperature` есть только у моделей с датчиком на плате (в стенде — Router-2, штатно 22–24 °C, порог 40 °C). `mktxp_system_cpu_temperature` есть, наоборот, только у hAP ax³ (Router-1, штатно 57–58 °C, порог 70 °C). Если оставить одно правило с порогом 30 °C, оно бы срабатывало постоянно на hAP ax³ и молчало на RB2011. Проверьте фактические значения на дашборде перед изменением порогов.
 
@@ -594,9 +602,13 @@ nano .env
 ```ini
 TELEGRAM_BOT_TOKEN=1234567890:AAExampleTokenReplaceMe
 TELEGRAM_CHAT_ID=-1001234567890
+# Необязательно: топик форума внутри группы (только для групп с форумами)
+TELEGRAM_MESSAGE_THREAD_ID=10721
 ```
 
 `chat_id` личного чата обычно положительный (`1234567890`), группы и супергруппы — отрицательные (`-1001234567890` для супергруппы). Узнать его: напишите боту `/start`, затем откройте `https://api.telegram.org/bot<ТОКЕН>/getUpdates` и найдите `"chat":{"id":...}`.
+
+Если группа с форумами (`is_forum: true`) и алерты нужны в отдельном топике, укажите `TELEGRAM_MESSAGE_THREAD_ID` — Alertmanager отправит сообщения в этот топик вместо General. Номер топика можно взять из `getUpdates` по событию его создания (`message_thread_id`).
 
 Дальше Alertmanager нужно пересоздать — конфиг генерируется при старте:
 
@@ -604,7 +616,7 @@ TELEGRAM_CHAT_ID=-1001234567890
 docker compose up -d --force-recreate alertmanager
 ```
 
-Механика: `alertmanager/alertmanager.yml.tmpl` — шаблон с плейсхолдерами `${TELEGRAM_BOT_TOKEN}` и `${TELEGRAM_CHAT_ID}`. Entrypoint `alertmanager/entrypoint.sh` подставляет их через `sed` в `/alertmanager/alertmanager.yml` внутри контейнера, после чего запускает Alertmanager.
+Механика: `alertmanager/alertmanager.yml.tmpl` — шаблон с плейсхолдерами `${TELEGRAM_BOT_TOKEN}`, `${TELEGRAM_CHAT_ID}` и `${TELEGRAM_MESSAGE_THREAD_ID}`. Entrypoint `alertmanager/entrypoint.sh` подставляет их через `sed` в `/alertmanager/alertmanager.yml` внутри контейнера, после чего запускает Alertmanager.
 
 Проверка доставки:
 
@@ -612,6 +624,23 @@ docker compose up -d --force-recreate alertmanager
 bash TestAlertmanager
 docker compose logs alertmanager | grep "Notify success"
 curl -s http://localhost:9093/metrics | grep 'alertmanager_notifications_total{integration="telegram"}'
+```
+
+#### Скрипт `alertmanager/send_test_message.sh`
+
+Отправляет сообщение напрямую через Bot API, минуя Alertmanager. Полезно, чтобы отделить проблему бота (`токен`, `chat_id`, топик, права) от проблемы Alertmanager (маршрутизация, silence, шаблон уведомления).
+
+```bash
+./alertmanager/send_test_message.sh                    # шаблонный алерт (Router-1)
+./alertmanager/send_test_message.sh alert Router-3     # то же с другим именем устройства
+./alertmanager/send_test_message.sh plain              # короткий текст
+./alertmanager/send_test_message.sh text "проверка"    # произвольный текст
+```
+
+Настройки читаются из `.env` в корне репозитория. Если `TELEGRAM_MESSAGE_THREAD_ID` задан, сообщение уходит в топик, иначе — в General. Скрипт печатает `message_id`, название чата, тип и топик, а при ошибке Telegram API возвращает ненулевой код:
+
+```
+Отправлено: message_id=10733 | chat=Lan (supergroup) | thread=10721
 ```
 
 > ⚠️ Бот должен быть добавлен в чат или группу и иметь право отправки. Если в группе включён режим защиты контента, бот должен быть администратором.

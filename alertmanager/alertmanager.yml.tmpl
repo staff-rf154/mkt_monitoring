@@ -18,6 +18,7 @@ receivers:
     - api_url: 'https://api.telegram.org'
       bot_token: '${TELEGRAM_BOT_TOKEN}'
       chat_id: ${TELEGRAM_CHAT_ID}
+      message_thread_id: ${TELEGRAM_MESSAGE_THREAD_ID}   # Топик форума в группе
       parse_mode: 'HTML'                # Шаблон telegram.tmpl использует HTML-разметку
       message: '{{ template "telegram.message" . }}'
       send_resolved: true                   # Отправлять уведомления о восстановлении
