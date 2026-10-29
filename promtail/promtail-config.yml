@@ -22,10 +22,25 @@ scrape_configs:
       target_label: 'routerboard'
     - source_labels: ['__syslog_connection_hostname']
       target_label: 'syslog_host'
-
 #    - source_labels: ['__syslog_connection_ip_address']
 #      target_label: 'syslog_host_ip'
 #    - source_labels: ['__syslog_message_severity']
 #     target_label: 'severity'
 #    - source_labels: ['__syslog_message_facility']
-#      target_label: 'facility'
+#     target_label: 'facility'
+
+- job_name: llm-docker
+  file_sd_configs:
+    - files:
+        - /etc/promtail/file_sd/llm.json
+      refresh_interval: 15s
+  pipeline_stages:
+    - json:
+        expressions:
+          log: log
+          stream: stream
+    - labels:
+        stream:
+    - output:
+        source: log
+

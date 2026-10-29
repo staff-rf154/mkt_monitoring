@@ -1,6 +1,7 @@
 # Secrets
 .env
 amnezia/.env
+amnezia/.env.iphone
 mktxp/credentials.yml
 
 # Grafana data
@@ -11,6 +12,9 @@ alertmanager/data/
 
 # Loki data
 loki/data/
+
+# Promtail file_sd (генерируется docker-logs-sd)
+promtail/file_sd/
 
 # Prometheus data
 prometheus/data/

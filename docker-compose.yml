@@ -3,6 +3,7 @@ networks:
 
 volumes:
   etc_amnezia_wg: {}
+  etc_amnezia_wg_iphone: {}
 
 services:
   mktxp:
@@ -64,6 +65,8 @@ services:
     container_name: prometheus
 #    hostname: tmp.154s.ru
     image: prom/prometheus:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       monitoring: null
     ports:
@@ -90,6 +93,21 @@ services:
     restart: unless-stopped
     volumes:
     - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    - /opt/docker/directory/containers:/var/lib/docker/containers:ro
+    - ./promtail/file_sd:/etc/promtail/file_sd:ro
+  docker-logs-sd:
+    image: alpine:3.20
+    container_name: docker-logs-sd
+    restart: unless-stopped
+    command:
+    - sh
+    - /usr/local/bin/gen-llm-targets.sh
+    networks:
+      monitoring: null
+    volumes:
+    - /opt/docker/directory/containers:/var/lib/docker/containers:ro
+    - ./promtail/file_sd:/targets
+    - ./promtail/gen-llm-targets.sh:/usr/local/bin/gen-llm-targets.sh:ro
   syslog-ng:
     command: -edv
     container_name: syslog-ng
@@ -146,20 +164,20 @@ services:
     networks:
       monitoring: null
   node-exporter:
-    image: prom/node-exporter
+    image: prom/node-exporter:latest
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
-    container_name: exporter
+    container_name: node-exporter
     hostname: exporter
     command:
-      - --path.procfs=/host/proc
-      - --path.sysfs=/host/sys
-      - --collector.filesystem.ignored-mount-points
-      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
     ports:
-      - 9100:9100
+      - "9100:9100"
     restart: unless-stopped
     environment:
       TZ: "Asia/Novosibirsk"
@@ -207,3 +225,55 @@ services:
       - /dev/net/tun:/dev/net/tun
     networks:
       monitoring: null
+
+  # Второй туннель только для iPhone (Marat). Отдельный порт, том и подсеть,
+# чтобы смена параметров обфускации не задела 10 клиентов основного инстанса.
+  amnezia-iphone:
+    image: ghcr.io/wowly/amnezia-wg-easy:latest
+    container_name: amnezia-iphone
+    env_file: ./amnezia/.env.iphone
+    volumes:
+      - etc_amnezia_wg_iphone:/etc/amnezia/amneziawg
+    ports:
+      - "51822:51822/udp"
+      - "51823:51823/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.src_valid_mark: 1
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      monitoring: null
+
+  # ============================================================================
+  # LLM V3 Monitoring Stack
+  # ============================================================================
+  
+  # Postgres Exporter для main-db
+  postgres-exporter-main:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter-main
+    environment:
+      DATA_SOURCE_NAME: "${LLM_MAIN_DSN}"
+    ports:
+      - "9187:9187"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Postgres Exporter для chat-db
+  postgres-exporter-chat:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter-chat
+    environment:
+      DATA_SOURCE_NAME: "${LLM_CHAT_DSN}"
+    ports:
+      - "9188:9187"
+    networks:
+      - monitoring
+    restart: unless-stopped
+
