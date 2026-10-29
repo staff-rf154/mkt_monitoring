@@ -18,6 +18,7 @@ alerting:
 rule_files:
 #  - 'microtik.rules'
   - 'alerts.rules'
+  - 'llm_v3_alerts.rules'
 
 scrape_configs:
 #  - job_name: 'adguard'
@@ -61,6 +62,15 @@ scrape_configs:
   - job_name: 'loki'
     static_configs:
     - targets: ['loki:3100']
+
+  - job_name: 'llm'
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8091']
+        labels:
+          host: 'llm-app'
 
   - job_name: 'promtail'
     static_configs:
@@ -139,3 +149,73 @@ scrape_configs:
         replacement: 'Router-3'
       - target_label: __address__
         replacement: blackbox:9115
+
+  # ============================================================================
+  # LLM V3 Monitoring
+  # ============================================================================
+  - job_name: 'llm_v3_app'
+    static_configs:
+      - targets: ['host.docker.internal:8091']
+        labels:
+          instance: 'llm-v3-app'
+          service: 'llm_v3'
+          component: 'application'
+
+  - job_name: 'llm_v3_worker'
+    static_configs:
+      - targets: ['10.54.5.94:8092']
+        labels:
+          instance: 'llm-v3-worker'
+          service: 'llm_v3'
+          component: 'worker'
+
+  - job_name: 'llm_v3_postgres_main'
+    static_configs:
+      - targets: ['postgres-exporter-main:9187']
+        labels:
+          instance: 'llm-main-db'
+          service: 'llm_v3'
+          component: 'database'
+          database: 'llm_main'
+
+  - job_name: 'llm_v3_postgres_chat'
+    static_configs:
+      - targets: ['postgres-exporter-chat:9187']
+        labels:
+          instance: 'llm-chat-db'
+          service: 'llm_v3'
+          component: 'database'
+          database: 'llm_chat'
+
+  - job_name: 'llm_v3_qdrant'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['host.docker.internal:6333']
+        labels:
+          instance: 'llm-qdrant'
+          service: 'llm_v3'
+          component: 'vector_db'
+
+  - job_name: 'llm_v3_ollama'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ['http://10.54.5.94:11434/api/tags']
+        labels:
+          instance: 'llm-ollama'
+          service: 'llm_v3'
+          component: 'llm'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  - job_name: 'llm_v3_node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'llm-host'
+          service: 'llm_v3'
+          component: 'host'

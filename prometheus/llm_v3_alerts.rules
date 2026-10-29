@@ -1,0 +1,164 @@
+# ============================================================================
+# LLM V3 Alert Rules
+# ============================================================================
+
+groups:
+  - name: llm_v3_alerts
+    rules:
+      # ============================================================================
+      # Application Health
+      # ============================================================================
+      - alert: LLM_V3_AppDown
+        expr: up{job="llm_v3_app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 App is down"
+          description: "LLM V3 Application has been down for more than 1 minute"
+
+      - alert: LLM_V3_WorkerDown
+        expr: up{job="llm_v3_worker"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 Worker is down"
+          description: "LLM V3 Worker has been down for more than 2 minutes"
+
+      # ============================================================================
+      # Database Health
+      # ============================================================================
+      - alert: LLM_V3_PostgresMainDown
+        expr: up{job="llm_v3_postgres_main"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 Main Database is down"
+          description: "PostgreSQL main database has been down for more than 1 minute"
+
+      - alert: LLM_V3_PostgresChatDown
+        expr: up{job="llm_v3_postgres_chat"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 Chat Database is down"
+          description: "PostgreSQL chat database has been down for more than 1 minute"
+
+      - alert: LLM_V3_PostgresHighConnections
+        expr: pg_stat_activity_count{job=~"llm_v3_postgres_.*"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "PostgreSQL high connection count"
+          description: "PostgreSQL has {{ $value }} active connections"
+
+      - alert: LLM_V3_PostgresDeadlocks
+        expr: increase(pg_stat_database_deadlocks{job=~"llm_v3_postgres_.*"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "PostgreSQL deadlocks detected"
+          description: "{{ $value }} deadlocks detected in the last 5 minutes"
+
+      - alert: LLM_V3_PostgresSlowQueries
+        expr: pg_stat_activity_count{state="idle in transaction", job=~"llm_v3_postgres_.*"} > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "{{ $value }} queries in idle in transaction state"
+
+      # ============================================================================
+      # Qdrant Health
+      # ============================================================================
+      - alert: LLM_V3_QdrantDown
+        expr: up{job="llm_v3_qdrant"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 Qdrant is down"
+          description: "Qdrant vector database has been down for more than 1 minute"
+
+      # ============================================================================
+      # Ollama Health
+      # ============================================================================
+      - alert: LLM_V3_OllamaDown
+        expr: probe_success{job="llm_v3_ollama"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "LLM V3 Ollama is down"
+          description: "Ollama LLM server has been down for more than 1 minute"
+
+      # ============================================================================
+      # Host Resources
+      # ============================================================================
+      - alert: LLM_V3_HighCPU
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle", job="llm_v3_node"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "High CPU usage on LLM V3 host"
+          description: "CPU usage is above 80% for 5 minutes"
+
+      - alert: LLM_V3_HighMemory
+        expr: (node_memory_MemTotal_bytes{job="llm_v3_node"} - node_memory_MemAvailable_bytes{job="llm_v3_node"}) / node_memory_MemTotal_bytes{job="llm_v3_node"} * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "High memory usage on LLM V3 host"
+          description: "Memory usage is above 85% for 5 minutes"
+
+      - alert: LLM_V3_LowDiskSpace
+        expr: (node_filesystem_avail_bytes{job="llm_v3_node", mountpoint="/"} / node_filesystem_size_bytes{job="llm_v3_node", mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+          service: llm_v3
+        annotations:
+          summary: "Low disk space on LLM V3 host"
+          description: "Disk space is below 15%"
+
+      # ============================================================================
+      # Application Metrics
+      # ============================================================================
+      - alert: LLM_V3_HighErrorRate
+        expr: rate(http_requests_total{job="llm_v3_app", status=~"5.."}[5m]) / rate(http_requests_total{job="llm_v3_app"}[5m]) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "High error rate on LLM V3 App"
+          description: "Error rate is above 5% for 5 minutes"
+
+      - alert: LLM_V3_HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="llm_v3_app"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: llm_v3
+        annotations:
+          summary: "High latency on LLM V3 App"
+          description: "95th percentile latency is above 10 seconds"

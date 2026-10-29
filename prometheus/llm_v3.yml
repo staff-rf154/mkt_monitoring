@@ -1,0 +1,122 @@
+# ============================================================================
+# LLM V3 Monitoring Configuration
+# ============================================================================
+
+# Глобальные настройки
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# Правила алертов
+rule_files:
+  - "llm_v3_alerts.rules"
+
+# Конфигурация алертов
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Цели для скрейпинга
+scrape_configs:
+  # ============================================================================
+  # LLM V3 Application
+  # ============================================================================
+  - job_name: 'llm_v3_app'
+    static_configs:
+      - targets: ['10.54.5.94:8091']
+        labels:
+          instance: 'llm-v3-app'
+          service: 'llm_v3'
+          component: 'application'
+
+  # ============================================================================
+  # LLM V3 Worker
+  # ============================================================================
+  - job_name: 'llm_v3_worker'
+    static_configs:
+      - targets: ['10.54.5.94:8092']
+        labels:
+          instance: 'llm-v3-worker'
+          service: 'llm_v3'
+          component: 'worker'
+
+  # ============================================================================
+  # PostgreSQL Main Database
+  # ============================================================================
+  - job_name: 'llm_v3_postgres_main'
+    static_configs:
+      - targets: ['postgres-exporter-main:9187']
+        labels:
+          instance: 'llm-main-db'
+          service: 'llm_v3'
+          component: 'database'
+          database: 'llm_main'
+
+  # ============================================================================
+  # PostgreSQL Chat Database
+  # ============================================================================
+  - job_name: 'llm_v3_postgres_chat'
+    static_configs:
+      - targets: ['postgres-exporter-chat:9187']
+        labels:
+          instance: 'llm-chat-db'
+          service: 'llm_v3'
+          component: 'database'
+          database: 'llm_chat'
+
+  # ============================================================================
+  # Qdrant Vector Database
+  # ============================================================================
+  - job_name: 'llm_v3_qdrant'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['10.54.5.94:6333']
+        labels:
+          instance: 'llm-qdrant'
+          service: 'llm_v3'
+          component: 'vector_db'
+
+  # ============================================================================
+  # Ollama LLM Server
+  # ============================================================================
+  - job_name: 'llm_v3_ollama'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ['http://10.54.5.94:11434/api/tags']
+        labels:
+          instance: 'llm-ollama'
+          service: 'llm_v3'
+          component: 'llm'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # ============================================================================
+  # Host Node Exporter
+  # ============================================================================
+  - job_name: 'llm_v3_node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'llm-host'
+          service: 'llm_v3'
+          component: 'host'
+
+  # ============================================================================
+  # Traefik Reverse Proxy
+  # ============================================================================
+  - job_name: 'llm_v3_traefik'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['10.54.5.94:8080']
+        labels:
+          instance: 'llm-traefik'
+          service: 'llm_v3'
+          component: 'proxy'
