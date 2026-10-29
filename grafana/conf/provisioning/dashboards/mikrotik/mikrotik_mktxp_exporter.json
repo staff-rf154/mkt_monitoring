@@ -6542,7 +6542,7 @@
         "spec": {
           "id": 155,
           "title": "Total Network",
-          "description": "Входящий и исходящий трафик по всем интерфейсам, бит в секунду",
+          "description": "Входящая и исходящая скорость по всем интерфейсам, бит в секунду. In — вверх от нуля, Out — вниз, ноль по центру оси.",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -6557,7 +6557,7 @@
                       "version": "v0",
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(rate(mktxp_interface_tx_byte_total{routerboard_name=\"$node\"}[5m])) * 8",
+                        "expr": "-sum(rate(mktxp_interface_tx_byte_total{routerboard_name=\"$node\"}[5m])) * 8",
                         "instant": false,
                         "legendFormat": "Total Network Outbound",
                         "range": true
@@ -6601,7 +6601,8 @@
                   "calcs": [
                     "mean",
                     "min",
-                    "max"
+                    "max",
+                    "lastNotNull"
                   ],
                   "displayMode": "table",
                   "placement": "bottom",
@@ -6635,7 +6636,7 @@
                   },
                   "custom": {
                     "axisBorderShow": false,
-                    "axisCenteredZero": false,
+                    "axisCenteredZero": true,
                     "axisColorMode": "text",
                     "axisLabel": "",
                     "axisPlacement": "auto",
